@@ -13,7 +13,7 @@ Seems to behave amazingly well. Tests passed:
 
 
 
-
-### References ###
 ===========
+### References ###
+
 Code skeleton taken from Caltech course ay190 - Computational astrophysics by Christian Ott.
