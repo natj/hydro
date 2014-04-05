@@ -1,11 +1,12 @@
 #equation of states
 
-
+#ideal gas
 function eos_press(rho, eps, gamma)
-    press = (gamma- 1.0) .* rho .* eps
+    press = (gamma - 1.0) .* rho .* eps
     return press
 end
 
+#soundspeed
 function eos_cs2(rho, eps, gamma)
     prs = (gamma - 1.0) .* rho .* eps
     dpde = (gamma - 1.0) .* rho
