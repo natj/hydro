@@ -122,6 +122,27 @@ function setup_ID(self)
 end
 
 
+function apply_bcs(hyd)
+
+    #arrays starting from zero
+    #       |g                  |n-g #
+    #[0 1 2 x x x  .....  x x x 7 8 9]
+
+    #arrays starting from 1
+    #     |g                  |n-g    #
+    #[1 2 3 x x x  .....  x x x 8 9 10]
+    hyd.rho[1:hyd.g] = hyd.rho[hyd.g+1]
+    hyd.vel[1:hyd.g] = hyd.vel[hyd.g+1]
+    hyd.eps[1:hyd.g] = hyd.eps[hyd.g+1]
+    hyd.press[1:hyd.g] = hyd.press[hyd.g+1]
+
+    hyd.rho[(hyd.n-hyd.g+1) : hyd.n] = hyd.rho[hyd.n-hyd.g]
+    hyd.vel[(hyd.n-hyd.g+1) : hyd.n] = hyd.vel[hyd.n-hyd.g]
+    hyd.eps[(hyd.n-hyd.g+1) : hyd.n] = hyd.eps[hyd.n-hyd.g]
+    hyd.press[(hyd.n-hyd.g+1) : hyd.n] = hyd.press[hyd.n-hyd.g]
+
+    return hyd
+end
 
 
 

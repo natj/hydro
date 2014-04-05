@@ -10,7 +10,9 @@ nzones = 200
 tend = 0.2
 
 include("grid.jl")
-
+include("eos.jl")
+include("reconstr.jl")
+include("solvers.jl")
 
 function prim2con(rho, vel, eps)
     q = zeros(3, size(rho, 1))
@@ -30,116 +32,6 @@ function con2prim(q)
     return rho, eps, press, vel
 end
 
-function apply_bcs(hyd)
-
-    #arrays starting from zero
-    #       |g                  |n-g #
-    #[0 1 2 x x x  .....  x x x 7 8 9]
-
-    #arrays starting from 1
-    #     |g                  |n-g    #
-    #[1 2 3 x x x  .....  x x x 8 9 10]
-    hyd.rho[1:hyd.g] = hyd.rho[hyd.g+1]
-    hyd.vel[1:hyd.g] = hyd.vel[hyd.g+1]
-    hyd.eps[1:hyd.g] = hyd.eps[hyd.g+1]
-    hyd.press[1:hyd.g] = hyd.press[hyd.g+1]
-
-    hyd.rho[(hyd.n-hyd.g+1) : hyd.n] = hyd.rho[hyd.n-hyd.g]
-    hyd.vel[(hyd.n-hyd.g+1) : hyd.n] = hyd.vel[hyd.n-hyd.g]
-    hyd.eps[(hyd.n-hyd.g+1) : hyd.n] = hyd.eps[hyd.n-hyd.g]
-    hyd.press[(hyd.n-hyd.g+1) : hyd.n] = hyd.press[hyd.n-hyd.g]
-
-    return hyd
-end
-
-function minmod(a,b)
-    if a*b < 0.0
-        return 0.0
-    elseif abs(a) < abs(b)
-        return a
-    else
-        return b
-    end
-
-    nothing
-end
-
-signum(x,y) = y >= 0.0 ? abs(x) : -abs(x)
-#function signum(x,y)
-#    if y >= 0.0
-#        return abs(x)
-#    else
-#        return -abs(x)
-#    end
-#end
-
-
-function tvd_mc_reconstruct(n, g, f, x, xi)
-    fp = zeros(n)
-    fm = zeros(n)
-
-    for i = g:(n-g+2)
-        dx_up = x[i] - x[i-1]
-        dx_down = x[i+1] - x[i]
-        dx_m = x[i] -xi[i]
-        dx_p = xi[i+1] - x[i]
-        df_up = (f[i]-f[i-1]) / dx_up
-        df_down = (f[i+1]-f[i]) / dx_down
-
-        if df_up*df_down < 0.0
-            delta = 0.0
-        else
-            delta = signum(min(2.0abs(df_up), 2.0abs(df_down), 0.5(abs(df_up)+abs(df_down))), df_up + df_down)
-        end
-
-        fp[i] = f[i] + delta*dx_p
-        fm[i] = f[i] - delta*dx_m
-    end
-
-    return fp, fm
-end
-
-
-function reconstruct(hyd)
-
-    hyd.rhop, hyd.rhom = tvd_mc_reconstruct(hyd.n,
-                                            hyd.g,
-                                            hyd.rho,
-                                            hyd.x,
-                                            hyd.xi)
-    hyd.epsp, hyd.epsm = tvd_mc_reconstruct(hyd.n,
-                                            hyd.g,
-                                            hyd.eps,
-                                            hyd.x,
-                                            hyd.xi)
-    hyd.velp, hyd.velm = tvd_mc_reconstruct(hyd.n,
-                                            hyd.g,
-                                            hyd.vel,
-                                            hyd.x,
-                                            hyd.xi)
-
-    hyd.pressp = eos_press(hyd.rhop, hyd.epsp, gamma)
-    hyd.pressm = eos_press(hyd.rhom, hyd.epsm, gamma)
-
-    hyd.qp = prim2con(hyd.rhop, hyd.velp, hyd.epsp)
-    hyd.qm = prim2con(hyd.rhom, hyd.velm, hyd.epsm)
-
-    return hyd
-end
-
-#equation of state
-function eos_press(rho, eps, gamma)
-    press = (gamma- 1.0) .* rho .* eps
-    return press
-end
-
-function eos_cs2(rho, eps, gamma)
-    prs = (gamma - 1.0) .* rho .* eps
-    dpde = (gamma - 1.0) .* rho
-    dpdrho = (gamma - 1.0) .* eps
-    cs2 = dpdrho .+ dpde .* prs ./ (rho + 1.0e-30).^2.0
-    return cs2
-end
 
 #time step calculation
 function calc_dt(hyd, dtp)
@@ -154,65 +46,6 @@ function calc_dt(hyd, dtp)
     return dtnew
 end
 
-#HLLE solver
-function hlle(hyd)
-    fluxdiff = zeros(3, hyd.n)
-
-    #compute eigenvalues
-    evl = zeros(3, hyd.n)
-    evr = zeros(3, hyd.n)
-    smin = zeros(hyd.n)
-    smax = zeros(hyd.n)
-    csp = sqrt(eos_cs2(hyd.rhop, hyd.epsp, gamma))
-    csm = sqrt(eos_cs2(hyd.rhom, hyd.epsm, gamma))
-
-    for i = 2:(hyd.n-1)
-        evl[1,i] = hyd.velp[i]
-        evr[1,i] = hyd.velm[i+1]
-        evl[2,i] = hyd.velp[i] - csp[i]
-        evr[2,i] = hyd.velm[i+1] - csm[i+1]
-        evl[3,i] = hyd.velp[i] + csp[i]
-        evr[3,i] = hyd.velm[i+1] +csm[i+1]
-
-        #min and max eigenvalues
-        smin[i] = min(evl[1,i], evl[2,i], evl[3,i],
-                      evr[1,i], evr[2,i], evr[3,i], 0.0)
-        smax[i] = max(evl[1,i], evl[2,i], evl[3,i],
-                      evr[1,i], evr[2,i], evr[3,i], 0.0)
-    end
-
-    #set up flux left L and right R of the interface
-    #at i+1/2
-    fluxl = zeros(3, hyd.n)
-    fluxr = zeros(3, hyd.n)
-
-    for i = 2:(hyd.n-1)
-        fluxl[1,i] = hyd.qp[1,i] * hyd.velp[i]
-        fluxl[2,i] = hyd.qp[2,i] * hyd.velp[i] + hyd.pressp[i]
-        fluxl[3,i] = (hyd.qp[3,i] + hyd.pressp[i]) * hyd.velp[i]
-
-        fluxr[1,i] = hyd.qm[1,i+1] * hyd.velm[i+1]
-        fluxr[2,i] = hyd.qm[2,i+1] * hyd.velm[i+1] + hyd.pressm[i+1]
-        fluxr[3,i] = (hyd.qm[3,i+1] + hyd.pressm[i+1]) * hyd.velm[i+1]
-    end
-
-    #solve the Riemann problem for the i+1/2 interface
-    ds = smax .- smin
-    flux = zeros(3, hyd.n)
-    for i = hyd.g:(hyd.n-hyd.g+1)
-        flux[:,i] = (smax[i]*fluxl[:,i] .- smin[i]*fluxr[:,i] .+ smax[i]*smin[i]*(hyd.qm[:,i+1] - hyd.qp[:,i])) / ds[i]
-    end
-
-    #flux difference
-    for i = (hyd.g+1):(hyd.n-hyd.g+1)
-        rm = hyd.xi[i]
-        rp = hyd.xi[i+1]
-        dxi = 1.0/(rp - rm)
-        fluxdiff[:,i] = dxi * (flux[:,i]  .- flux[:,i-1])
-    end
-
-    return fluxdiff
-end
 
 function calc_rhs(hyd)
     #reconstruction and prim2con
