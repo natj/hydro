@@ -7,9 +7,9 @@ cfl = 0.6
 dt = 1.0e-5
 dtp = dt
 
-nx = 50
-ny = 50
-tend = 0.2
+nx = 100
+ny = 100
+tend = 10.0
 
 include("grid2d.jl")
 include("eos.jl")
@@ -58,6 +58,7 @@ function calc_dt(hyd, dtp)
 
     dtnew = min(cfl*dtnew, 1.05*dtp)
 
+    dtnew = max(dtnew, 1.0e-5)
     return dtnew
 end
 
@@ -73,17 +74,49 @@ function calc_rhs(hyd, iter)
     return -fluxdiff
 end
 
-function visualize(hyd, colormap=colormap())
+function visualize(hyd)
 
     #println(hyd.rho)
+    cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
 
+    #rho
     hdata = hyd.rho
-    p=FramedPlot()
+    p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
-    img = Winston.data2rgb(hdata, clims, colormap)'
-    add(p, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
-    display(p)
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(p1, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+
+    #pressure
+    hdata = hyd.press
+    p2=FramedPlot()
+    #clims = (minimum(hdata), maximum(hdata))
+    clims = (0.0, 1.0)
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(p2, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+
+    #vel
+    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)
+    p3=FramedPlot()
+    #clims = (minimum(hdata), maximum(hdata))
+    clims = (0.0, 1.0)
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(p3, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+
+    #eps
+    hdata = hyd.eps
+    p4=FramedPlot()
+    #clims = (minimum(hdata), maximum(hdata))
+    clims = (0.0, 1.0)
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(p4, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+
+    t = Table(1,4)
+    t[1,1] = p1
+    t[1,2] = p2
+    t[1,3] = p3
+    t[1,4] = p4
+    display(t)
 
 end
 
@@ -95,10 +128,10 @@ end
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 0.5)
+hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 5.0)
 
 #set up initial data
-hyd = setup_blast(hyd)
+hyd = setup_taylor(hyd)
 
 #get initial timestep
 dt = calc_dt(hyd, dt)

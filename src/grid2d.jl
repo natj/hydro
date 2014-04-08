@@ -252,6 +252,40 @@ function setup_blast(self)
     return self
 end
 
+#Shoctube initial data
+function setup_taylor(self)
+    rchange = int(0.8self.ny)
+
+    rho1 = 0.8
+    rho2 = 0.1
+    press1 = 0.1
+
+    #println("$(self.y[self.ny - self.g])")
+    #println("$(self.y[self.g + 1])")
+
+    #println("rchange= ", rchange)
+    #println("$((rchange+1):self.ny)")
+
+    self.rho[1:rchange, :] = rho2*ones(rchange, self.nx)
+    self.rho[(rchange+1):(self.ny), :] = rho1*ones((self.ny-rchange), self.nx)
+
+    self.press[:,:] = press1*ones(self.ny, self.nx)
+    self.eps[:,:] = press1./rho1./(gamma - 1.0)
+
+    self.velx[:,:] = zeros(self.ny, self.nx)
+    self.vely[:,:] = zeros(self.ny, self.nx)
+
+    dx = self.x[self.nx] - self.x[1]
+    for j = rchange:self.ny
+        self.vely[j,10:(self.nx-10-1)] = Float64[-0.5sin(pi*self.x[n]/dx) for n = 10:(self.nx-10-1)]
+    end
+
+    return self
+end
+
+
+
+
 function apply_bcs(hyd)
 
     #arrays starting from zero
