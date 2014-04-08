@@ -37,30 +37,85 @@ function tvd_mc_reconstruction(n, g, f, x, xi)
     return fp, fm
 end
 
+#2-dim reconstruction
+function reconstruct(hyd::data2d)
 
-function reconstruct(hyd)
+  #x-pencils
+  for j = hyd.g:(hyd.ny-hyd.g+2)
+    rhop, rhom = tvd_mc_reconstruction(hyd.nx,
+                                       hyd.g,
+                                       vec(hyd.rho[j,:]),
+                                       hyd.x,
+                                       hyd.xi)
 
-    hyd.rhop, hyd.rhom = tvd_mc_reconstruction(hyd.n,
-                                               hyd.g,
-                                               hyd.rho,
-                                               hyd.x,
-                                               hyd.xi)
-    hyd.epsp, hyd.epsm = tvd_mc_reconstruction(hyd.n,
-                                               hyd.g,
-                                               hyd.eps,
-                                               hyd.x,
-                                               hyd.xi)
-    hyd.velp, hyd.velm = tvd_mc_reconstruction(hyd.n,
-                                               hyd.g,
-                                               hyd.vel,
-                                               hyd.x,
-                                               hyd.xi)
+    hyd.rhop[j,:,1] = rhop'
+    hyd.rhom[j,:,1] = rhom'
 
-    hyd.pressp = eos_press(hyd.rhop, hyd.epsp, gamma)
-    hyd.pressm = eos_press(hyd.rhom, hyd.epsm, gamma)
+    epsp, epsm = tvd_mc_reconstruction(hyd.nx,
+                                       hyd.g,
+                                       vec(hyd.eps[j,:]),
+                                       hyd.x,
+                                       hyd.xi)
 
-    hyd.qp = prim2con(hyd.rhop, hyd.velp, hyd.epsp)
-    hyd.qm = prim2con(hyd.rhom, hyd.velm, hyd.epsm)
+    hyd.epsp[j,:,1] = epsp'
+    hyd.epsm[j,:,1] = epsm'
 
-    return hyd
+    velxp, velxm = tvd_mc_reconstruction(hyd.nx,
+                                         hyd.g,
+                                         vec(hyd.velx[j,:]),
+                                         hyd.x,
+                                         hyd.xi)
+
+    hyd.velxp[j,:,1] = velxp'
+    hyd.velxm[j,:,1] = velxm'
+
+    velyp, velym = tvd_mc_reconstruction(hyd.nx,
+                                         hyd.g,
+                                         vec(hyd.vely[j,:]),
+                                         hyd.x,
+                                         hyd.xi)
+
+    hyd.velyp[j,:,1] = velyp'
+    hyd.velym[j,:,1] = velym'
+  end
+
+  #y-pencils
+  for i = hyd.g:(hyd.nx-hyd.g+2)
+    hyd.rhop[:,i,2], hyd.rhom[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+                                                             hyd.g,
+                                                             hyd.rho[:,i],
+                                                             hyd.y,
+                                                             hyd.yi)
+
+    hyd.epsp[:,i,2], hyd.epsm[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+                                                             hyd.g,
+                                                             hyd.eps[:,i,1],
+                                                             hyd.y,
+                                                             hyd.yi)
+
+    hyd.velxp[:,i,2], hyd.velxm[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+                                                               hyd.g,
+                                                               hyd.velx[:,i],
+                                                               hyd.y,
+                                                               hyd.yi)
+
+    hyd.velyp[:,i,2], hyd.velym[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+                                                               hyd.g,
+                                                               hyd.vely[:,i],
+                                                               hyd.y,
+                                                               hyd.yi)
+  end
+
+
+  hyd.pressp[:,:,1] = eos_press(hyd.rhop[:,:,1], hyd.epsp[:,:,1], gamma)
+  hyd.pressm[:,:,1] = eos_press(hyd.rhom[:,:,1], hyd.epsm[:,:,1], gamma)
+  hyd.pressp[:,:,2] = eos_press(hyd.rhop[:,:,2], hyd.epsp[:,:,2], gamma)
+  hyd.pressm[:,:,2] = eos_press(hyd.rhom[:,:,2], hyd.epsm[:,:,2], gamma)
+
+  hyd.qp[:,:,:,1] = prim2con(hyd.rhop[:,:,1], hyd.velxp[:,:,1], hyd.velyp[:,:,1], hyd.epsp[:,:,1])
+  hyd.qm[:,:,:,1] = prim2con(hyd.rhom[:,:,1], hyd.velxm[:,:,1], hyd.velym[:,:,1], hyd.epsm[:,:,1])
+  hyd.qp[:,:,:,2] = prim2con(hyd.rhop[:,:,2], hyd.velxp[:,:,2], hyd.velyp[:,:,2], hyd.epsp[:,:,2])
+  hyd.qm[:,:,:,2] = prim2con(hyd.rhom[:,:,2], hyd.velxm[:,:,2], hyd.velym[:,:,2], hyd.epsm[:,:,2])
+
+  return hyd
 end
