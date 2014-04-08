@@ -66,51 +66,67 @@ function hlle(hyd::data1d)
     return fluxdiff
 end
 
+
+#x-sweep
+function xsweep(hyd::data2d)
+    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
+    for j = (hyd.g+1):(hyd.ny-hyd.g+1)
+        #println("x  j=$j")
+        hyd1 = splice(hyd, j, 1)
+        fluxdiffi = hlle(hyd1)
+
+        for i = 1:hyd.nx
+            fluxdiff[j, i, 1] = fluxdiffi[i, 1]
+            fluxdiff[j, i, 2] = fluxdiffi[i, 2]
+            fluxdiff[j, i, 4] = fluxdiffi[i, 3]
+        end
+    end
+    return fluxdiff
+end
+
+#y-sweep
+function ysweep(hyd::data2d)
+    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
+    for j = (hyd.g+1):(hyd.nx-hyd.g+1)
+        #println("y  j=$j")
+        hyd1 = splice(hyd, j, 2)
+        fluxdiffi = hlle(hyd1)
+
+        for i = 1:hyd.ny
+            fluxdiff[i, j, 1] = fluxdiffi[i, 1]
+            fluxdiff[i, j, 3] = fluxdiffi[i, 2]
+            fluxdiff[i, j, 4] = fluxdiffi[i, 3]
+        end
+    end
+    return fluxdiff
+end
+
+
+#Split 2-dimensional flux
+function ssflux(hyd::data2d, dt, iter)
+    fluxdiff = mod(iter, 2) == 0 ? xsweep(hyd) : ysweep(hyd)
+    return fluxdiff
+end
+
+function ssyflux(hyd::data2d, dt, iter)
+    fluxdiff = ysweep(hyd)
+    return fluxdiff
+end
+
+
 #Split 2-dimensional flux
 #Strang splitting
 function sflux(hyd::data2d, dt, iter)
 
-    #x-sweep
-    function xsweep(hyd::data2d)
-        fluxdiff = zeros(hyd.ny, hyd.nx, 4)
-        for j = (hyd.g+1):(hyd.ny-hyd.g+1)
-            #println("x  j=$j")
-            hyd1 = splice(hyd, j, 1)
-            fluxdiffi = hlle(hyd1)
+    hyd2 = hyd
 
-            for i = 1:hyd.nx
-                fluxdiff[j, i, 1] = fluxdiffi[i, 1]
-                fluxdiff[j, i, 2] = fluxdiffi[i, 2]
-                fluxdiff[j, i, 4] = fluxdiffi[i, 3]
-            end
-        end
-        return fluxdiff
-    end
-
-    #y-sweep
-    function ysweep(hyd::data2d)
-        fluxdiff = zeros(hyd.ny, hyd.nx, 4)
-        for j = (hyd.g+1):(hyd.nx-hyd.g+1)
-            #println("y  j=$j")
-            hyd1 = splice(hyd, j, 2)
-            fluxdiffi = hlle(hyd1)
-
-            for i = 1:hyd.ny
-                fluxdiff[i, j, 1] = fluxdiffi[i, 1]
-                fluxdiff[i, j, 3] = fluxdiffi[i, 2]
-                fluxdiff[i, j, 4] = fluxdiffi[i, 3]
-            end
-        end
-        return fluxdiff
-    end
-
-    qold = hyd.q
-    fluxdiff = mod(iter, 2) == 0 ? xsweep(hyd) : ysweep(hyd)
-    hyd.q = qold - dt*fluxdiff
-    hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
-    hyd = apply_bcs(hyd)
-    hyd = reconstruct(hyd)
-    fluxdiff = mod(iter, 2) == 0 ? ysweep(hyd) : xsweep(hyd)
+    qold = hyd2.q
+    fluxdiff = mod(iter, 2) == 0 ? xsweep(hyd2) : ysweep(hyd2)
+    hyd2.q = qold - dt*fluxdiff
+    hyd2.rho, hyd2.eps, hyd2.press, hyd2.velx, hyd2.vely = con2prim(hyd2.q)
+    hyd2 = apply_bcs(hyd2)
+    hyd2 = reconstruct(hyd2)
+    fluxdiff = mod(iter, 2) == 0 ? ysweep(hyd2) : xsweep(hyd2)
 
     return fluxdiff
 end

@@ -204,7 +204,7 @@ function grid_setup(self, xmin, xmax, ymin, ymax)
 end
 
 #Shoctube initial data
-function setup_tube(self)
+function setup_tubey(self)
     rchange = 0.5(self.y[self.ny - self.g] - self.y[self.g + 1])
 
     rho1 = 1.0
@@ -232,6 +232,33 @@ function setup_tube(self)
     return self
 end
 
+#Shoctube initial data
+function setup_tubex(self)
+    rchange = 0.5(self.x[self.nx - self.g] - self.x[self.g + 1])
+    #println("rchange=$rchange")
+    rho1 = 1.0
+    rho2 = 0.125
+    press1 = 1.0
+    press2 = 0.1
+
+    for i = 1:self.ny, j = 1:self.nx
+        if self.x[j] < rchange
+            self.rho[i, j] = rho1
+            self.press[i ,j] = press1
+            self.eps[i, j] = press1/rho1/(gamma - 1.0)
+            self.velx[i, j] = 0.0
+            self.vely[i, j] = 0.0
+        else
+            self.rho[i, j] = rho2
+            self.press[i, j] = press2
+            self.eps[i, j] = press2/rho2/(gamma - 1.0)
+            self.velx[i, j] = 0.0
+            self.vely[i, j] = 0.0
+        end
+    end
+
+    return self
+end
 
 #Shoctube initial data
 function setup_blast(self)
@@ -278,11 +305,13 @@ function setup_taylor(self)
     self.velx[:,:] = zeros(self.ny, self.nx)
     self.vely[:,:] = zeros(self.ny, self.nx)
 
-    offs = 10
+    offs = 22
     dx = self.x[self.nx-offs-1] - self.x[offs]
-    #for j = rchange:self.ny
-    for j = 1:self.ny
-        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.5sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+
+    for j = rchange:self.ny
+    #for j = 1:self.ny
+#        j = rchange
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.9sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 
     return self
@@ -327,12 +356,12 @@ function apply_bcs(hyd)
         hyd.press[j, :] = hyd.press[hyd.g+1, :]
     end
 
-    for j = (hyd.nx-hyd.g+1) : hyd.nx
-        hyd.rho[j, :] = hyd.rho[hyd.nx-hyd.g, :]
-        hyd.velx[j, :] = hyd.velx[hyd.nx-hyd.g, :]
-        hyd.vely[j, :] = hyd.vely[hyd.nx-hyd.g, :]
-        hyd.eps[j, :] = hyd.eps[hyd.nx-hyd.g, :]
-        hyd.press[j, :] = hyd.press[hyd.nx-hyd.g, :]
+    for j = (hyd.ny-hyd.g+1) : hyd.ny
+        hyd.rho[j, :] = hyd.rho[hyd.ny-hyd.g, :]
+        hyd.velx[j, :] = hyd.velx[hyd.ny-hyd.g, :]
+        hyd.vely[j, :] = hyd.vely[hyd.ny-hyd.g, :]
+        hyd.eps[j, :] = hyd.eps[hyd.ny-hyd.g, :]
+        hyd.press[j, :] = hyd.press[hyd.ny-hyd.g, :]
     end
 
     #TODO: check corner boundaries
@@ -373,8 +402,8 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
         hyd1.velp[:] = vec(hyd.velyp[ys, xs, dim])
         hyd1.velm[:] = vec(hyd.velym[ys, xs, dim])
 
-        hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 3, dim])
-        hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 3, dim])
+        hyd1.qm[:, 2] = vec(hyd.qm[ys, xs, 3, dim])
+        hyd1.qp[:, 2] = vec(hyd.qp[ys, xs, 3, dim])
     else
         error("dim = $dim is not valid")
     end

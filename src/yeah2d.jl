@@ -29,7 +29,7 @@ function con2prim(q)
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
     eps = q[:, :, 4] ./ rho - 0.5(velx.^2.0 + vely.^2.0)
-    #eps = clamp(eps, 1.0e-5, 1.0e10)
+    eps = clamp(eps, 1.0e-5, 1.0e10)
     press = eos_press(rho, eps, gamma)
 
     return rho, eps, press, velx, vely
@@ -43,7 +43,7 @@ function calc_dt(hyd, dtp)
         dtnew = min(dtnew, (hyd.x[i+1] - hyd.x[i]) / max(abs(hyd.velx[j, i]+cs[j, i]), abs(hyd.velx[j, i]-cs[j, i])))
     end
     for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
-        dtnew = min(dtnew, (hyd.y[i+1] - hyd.y[i]) / max(abs(hyd.vely[j, i]+cs[j, i]), abs(hyd.vely[j, i]-cs[j, i])))
+        dtnew = min(dtnew, (hyd.y[j+1] - hyd.y[j]) / max(abs(hyd.vely[j, i]+cs[j, i]), abs(hyd.vely[j, i]-cs[j, i])))
     end
 
     dtnew = min(cfl*dtnew, 1.05*dtp)
@@ -185,20 +185,20 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 10
-ny = 500
-tend = 0.15
+nx = 50
+ny = 200
+tend = 10.0
 
 #initialize
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
+hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 5.0)
 
 #set up initial data
-#hyd = setup_taylor(hyd)
+hyd = setup_taylor(hyd)
 #hyd = setup_blast(hyd)
-hyd = setup_tube(hyd)
+#hyd = setup_tubey(hyd)
 
 #main integration loop
 hyd = evolve(hyd, tend, gamma, cfl, nx, ny)
