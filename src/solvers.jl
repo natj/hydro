@@ -46,16 +46,21 @@ function hlle(hyd::data1d)
     #solve the Riemann problem for the i+1/2 interface
     ds = smax .- smin
     flux = zeros(hyd.n, 3)
-    for i = hyd.g:(hyd.n-hyd.g+1)
-        flux[i,:] = (smax[i]*fluxl[i,:] .- smin[i]*fluxr[i,:] .+ smax[i]*smin[i]*(hyd.qm[i+1,:] - hyd.qp[i,:])) / ds[i]
+
+    for j = 1:3
+        for i = hyd.g:(hyd.n-hyd.g+1)
+            flux[i,j] = (smax[i]*fluxl[i,j] - smin[i]*fluxr[i,j] + smax[i]*smin[i]*(hyd.qm[i+1,j] - hyd.qp[i,j])) / ds[i]
+        end
     end
 
     #flux difference
-    for i = (hyd.g+1):(hyd.n-hyd.g+1)
-        rm = hyd.xi[i]
-        rp = hyd.xi[i+1]
-        dxi = 1.0/(rp - rm)
-        fluxdiff[i,:] = dxi * (flux[i,:]  .- flux[i-1,:])
+    for j = 1:3
+        for i = (hyd.g+1):(hyd.n-hyd.g+1)
+            rm = hyd.xi[i]
+            rp = hyd.xi[i+1]
+            dxi = 1.0/(rp - rm)
+            fluxdiff[i, j] = dxi * (flux[i, j]  - flux[i-1, j])
+        end
     end
 
     return fluxdiff
@@ -63,7 +68,7 @@ end
 
 #Split 2-dimensional flux
 #Strang splitting
-function sflux(hyd::data2d, iter)
+function sflux(hyd::data2d, dt, iter)
 
     #x-sweep
     function xsweep(hyd::data2d)
@@ -73,9 +78,11 @@ function sflux(hyd::data2d, iter)
             hyd1 = splice(hyd, j, 1)
             fluxdiffi = hlle(hyd1)
 
-            fluxdiff[j, :, 1] = fluxdiffi[:, 1]
-            fluxdiff[j, :, 2] = fluxdiffi[:, 2]
-            fluxdiff[j, :, 4] = fluxdiffi[:, 3]
+            for i = 1:hyd.nx
+                fluxdiff[j, i, 1] = fluxdiffi[i, 1]
+                fluxdiff[j, i, 2] = fluxdiffi[i, 2]
+                fluxdiff[j, i, 4] = fluxdiffi[i, 3]
+            end
         end
         return fluxdiff
     end
@@ -88,9 +95,11 @@ function sflux(hyd::data2d, iter)
             hyd1 = splice(hyd, j, 2)
             fluxdiffi = hlle(hyd1)
 
-            fluxdiff[:, j, 1] = fluxdiffi[:, 1]'
-            fluxdiff[:, j, 3] = fluxdiffi[:, 2]'
-            fluxdiff[:, j, 4] = fluxdiffi[:, 3]'
+            for i = 1:hyd.ny
+                fluxdiff[i, j, 1] = fluxdiffi[i, 1]
+                fluxdiff[i, j, 3] = fluxdiffi[i, 2]
+                fluxdiff[i, j, 4] = fluxdiffi[i, 3]
+            end
         end
         return fluxdiff
     end

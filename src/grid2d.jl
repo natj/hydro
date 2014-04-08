@@ -204,30 +204,33 @@ function grid_setup(self, xmin, xmax, ymin, ymax)
 end
 
 #Shoctube initial data
-#function setup_tube(self)
-#    rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
+function setup_tube(self)
+    rchange = 0.5(self.y[self.ny - self.g] - self.y[self.g + 1])
 
-#    rho1 = 1.0
-#    rho2 = 0.125
-#    press1 = 1.0
-#    press2 = 0.1
+    rho1 = 1.0
+    rho2 = 0.125
+    press1 = 1.0
+    press2 = 0.1
 
-#    for i = 1:self.n
-#        if self.x[i] < rchange
-#            self.rho[i] = rho1
-#            self.press[i] = press1
-#            self.eps[i] = press1/rho1/(gamma - 1.0)
-#            self.vel[i] = 0.0
-#        else
-#            self.rho[i] = rho2
-#            self.press[i] = press2
-#            self.eps[i] = press2/rho2/(gamma - 1.0)
-#            self.vel[i] = 0.0
-#        end
-#    end
 
-#    return self
-#end
+    for i = 1:self.ny, j = 1:self.nx
+        if self.y[i] < rchange
+            self.rho[i, j] = rho1
+            self.press[i ,j] = press1
+            self.eps[i, j] = press1/rho1/(gamma - 1.0)
+            self.velx[i, j] = 0.0
+            self.vely[i, j] = 0.0
+        else
+            self.rho[i, j] = rho2
+            self.press[i, j] = press2
+            self.eps[i, j] = press2/rho2/(gamma - 1.0)
+            self.velx[i, j] = 0.0
+            self.vely[i, j] = 0.0
+        end
+    end
+
+    return self
+end
 
 
 #Shoctube initial data
@@ -275,9 +278,11 @@ function setup_taylor(self)
     self.velx[:,:] = zeros(self.ny, self.nx)
     self.vely[:,:] = zeros(self.ny, self.nx)
 
-    dx = self.x[self.nx] - self.x[1]
-    for j = rchange:self.ny
-        self.vely[j,10:(self.nx-10-1)] = Float64[-0.5sin(pi*self.x[n]/dx) for n = 10:(self.nx-10-1)]
+    offs = 10
+    dx = self.x[self.nx-offs-1] - self.x[offs]
+    #for j = rchange:self.ny
+    for j = 1:self.ny
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.5sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 
     return self

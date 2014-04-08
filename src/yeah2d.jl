@@ -1,21 +1,11 @@
 #YEt Another Hydro code
 #2-dim
 
-#basic parameters
-gamma = 1.4
-cfl = 0.6
-dt = 1.0e-5
-dtp = dt
-
-nx = 100
-ny = 100
-tend = 10.0
 
 include("grid2d.jl")
 include("eos.jl")
 include("reconstr.jl")
 include("solvers.jl")
-
 
 #2-dim
 function prim2con(rho::AbstractMatrix,
@@ -39,7 +29,7 @@ function con2prim(q)
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
     eps = q[:, :, 4] ./ rho - 0.5(velx.^2.0 + vely.^2.0)
-    eps = clamp(eps, 1.0e-5, 1.0e10)
+    #eps = clamp(eps, 1.0e-5, 1.0e10)
     press = eos_press(rho, eps, gamma)
 
     return rho, eps, press, velx, vely
@@ -58,17 +48,17 @@ function calc_dt(hyd, dtp)
 
     dtnew = min(cfl*dtnew, 1.05*dtp)
 
-    dtnew = max(dtnew, 1.0e-5)
+    #dtnew = max(dtnew, 1.0e-5)
     return dtnew
 end
 
 
-function calc_rhs(hyd, iter)
+function calc_rhs(hyd, dt, iter)
     #reconstruction and prim2con
     hyd = reconstruct(hyd)
 
     #compute flux difference
-    fluxdiff = sflux(hyd, iter)
+    fluxdiff = sflux(hyd, dt, iter)
 
     #return RHS = -fluxdiff
     return -fluxdiff
@@ -124,75 +114,95 @@ end
 # main program
 ###############
 
+function evolve(hyd, tend, gamma, cfl, nx, ny)
+
+    dt = 1.0e-5
+    dtp = dt
+
+    #get initial timestep
+    dt = calc_dt(hyd, dt)
+
+    #initial prim2con
+    hyd.q = prim2con(hyd.rho, hyd.velx, hyd.vely, hyd.eps)
+
+    t = 0.0
+    i = 1
+
+    #display
+    #plot(hyd.x, hyd.rho, "r-")
+    visualize(hyd)
+
+
+    while t < tend
+        if i % 10 == 0
+            #sleep(1.0)
+            #output
+            println("$i $t $dt")
+    #        p=plot(hyd.x, hyd.rho, "r-")
+    #        p=oplot(hyd.x, hyd.vel, "b-")
+    #        p=oplot(hyd.x, hyd.press, "g-")
+    #        display(p)
+            visualize(hyd)
+        end
+
+        #calculate new timestep
+        dt = calc_dt(hyd, dt)
+
+        #save old state
+        hydold = hyd
+        qold = hyd.q
+
+        #calc rhs
+        k1 = calc_rhs(hyd, 0.5dt, i)
+        #calculate intermediate step
+        hyd.q = qold + 0.5dt*k1
+        #con2prim
+        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+        #boundaries
+        hyd = apply_bcs(hyd)
+
+        #calc rhs
+        k2 = calc_rhs(hyd, dt, i)
+        #apply update
+        hyd.q = qold + dt*(0.5k1 + 0.5k2)
+        #con2prim
+        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+        #apply bcs
+        hyd = apply_bcs(hyd)
+
+        #update time
+        t += dt
+        i += 1
+
+        #if i > 10; break; end
+    end
+
+    return hyd
+end
+
+
+#basic parameters
+gamma = 1.4
+cfl = 0.5
+
+nx = 10
+ny = 500
+tend = 0.15
+
 #initialize
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 5.0)
+hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 
 #set up initial data
-hyd = setup_taylor(hyd)
+#hyd = setup_taylor(hyd)
+#hyd = setup_blast(hyd)
+hyd = setup_tube(hyd)
 
-#get initial timestep
-dt = calc_dt(hyd, dt)
-
-#initial prim2con
-hyd.q = prim2con(hyd.rho, hyd.velx, hyd.vely, hyd.eps)
-
-t = 0.0
-i = 1
-
-#display
-#plot(hyd.x, hyd.rho, "r-")
-visualize(hyd)
-
-
-while t < tend
-    if i % 10 == 0
-        #sleep(1.0)
-        #output
-        println("$i $t $dt")
-#        p=plot(hyd.x, hyd.rho, "r-")
-#        p=oplot(hyd.x, hyd.vel, "b-")
-#        p=oplot(hyd.x, hyd.press, "g-")
-#        display(p)
-        visualize(hyd)
-    end
-
-    #calculate new timestep
-    dt = calc_dt(hyd, dt)
-
-    #save old state
-    hydold = hyd
-    qold = hyd.q
-
-    #calc rhs
-    k1 = calc_rhs(hyd, i)
-    #calculate intermediate step
-    hyd.q = qold + 0.5dt*k1
-    #con2prim
-    hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
-    #boundaries
-    hyd = apply_bcs(hyd)
-
-    #calc rhs
-    k2 = calc_rhs(hyd, i)
-    #apply update
-    hyd.q = qold + dt*(0.5k1 + 0.5k2)
-    #con2prim
-    hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
-    #apply bcs
-    hyd = apply_bcs(hyd)
-
-    #update time
-    t += dt
-    i += 1
-
-end
-
-
-
-
+#main integration loop
+hyd = evolve(hyd, tend, gamma, cfl, nx, ny)
+#hyd = @profile evolve(hyd, tend, gamma, cfl, nx, ny)
 
 
 
