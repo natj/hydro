@@ -303,8 +303,21 @@ function setup_blast(self::data2d)
 
     midx = int(self.nx/2)
     midy = int(self.ny/2)
-    self.press[midy-2:midy+2, midx-2:midx+2] = press2
-    self.eps[midy-2:midy+2, midx-2:midx+2] = press2./rho1./(gamma - 1.0)
+
+
+    #circle=[1,3,4,4,5,5]
+    #circle=[2,4,5,6,6,6,7,7]
+    circle=[3,5,6,7,8,9,9,10,10,10]
+    N = length(circle)
+    for j = 0:N-1
+        yy = j
+        xx = circle[N-j]
+
+        self.press[midy+yy, midx-xx:midx+xx] = press2
+        self.eps[midy+yy, midx-xx:midx+xx] = press2./rho1./(gamma - 1.0)
+        self.press[midy-yy, midx-xx:midx+xx] = press2
+        self.eps[midy-yy, midx-xx:midx+xx] = press2./rho1./(gamma - 1.0)
+    end
 
     return self
 end
@@ -330,8 +343,6 @@ function setup_taylor(self::data2d)
     dx = self.x[self.nx-offs-1] - self.x[offs]
 
     for j = rchange:self.ny
-    #for j = 1:self.ny
-#        j = rchange
         self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.9sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 

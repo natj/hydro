@@ -69,47 +69,52 @@ function visualize(hyd)
 
     cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
 
-    hdata = hyd.rho[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
+    xs = hyd.g
+    xe = hyd.nx-hyd.g-1
+    ye = hyd.ny-hyd.g-1
+
+
+    hdata = hyd.rho[xs:ye, xs:xe]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p1, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
-    setattr(p1, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
-    setattr(p1, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
+    add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+    setattr(p1, xrange=(hyd.x[xs], hyd.x[xe]))
+    setattr(p1, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p1, title="rho")
 
     #pressure
-    hdata = hyd.press[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
+    hdata = hyd.press[xs:ye, xs:xe]
     p2=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p2, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
-    setattr(p2, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
-    setattr(p2, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
+    add(p2, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+    setattr(p2, xrange=(hyd.x[xs], hyd.x[xe]))
+    setattr(p2, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p2, title="press")
 
     #vel
-    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
+    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
     p3=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p3, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
-    setattr(p3, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
-    setattr(p3, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
+    add(p3, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+    setattr(p3, xrange=(hyd.x[xs], hyd.x[xe]))
+    setattr(p3, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p3, title="vel")
 
     #eps
-    hdata = hyd.eps[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
+    hdata = hyd.eps[xs:ye, xs:xe]
     p4=FramedPlot()
     clims = (minimum(hdata), maximum(hdata))
     #clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p4, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
-    setattr(p4, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
-    setattr(p4, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
+    add(p4, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+    setattr(p4, xrange=(hyd.x[xs], hyd.x[xe]))
+    setattr(p4, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p4, title="eps")
 
     t = Table(2,2)
@@ -187,20 +192,22 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 128
-ny = 128
-tend = 0.2
+nx = 200
+ny = 200
+tend = 0.003
 
 #initialize
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 0.5)
+hyd = grid_setup(hyd, 0.0, 0.25, 0.0, 0.25)
 
 #set up initial data
 #hyd = setup_taylor(hyd)
-#hyd = setup_blast(hyd)
-hyd = setup_tubexy(hyd)
+hyd = setup_blast(hyd)
+#hyd = setup_tubexy(hyd)
+
+visualize(hyd)
 
 #main integration loop
 hyd = evolve(hyd, tend, gamma, cfl, nx, ny)
