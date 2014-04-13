@@ -1,6 +1,6 @@
 #equation of states
 
-#ideal gas
+#gamma law
 function eos_press(rho, eps, gamma)
     press = (gamma - 1.0) .* rho .* eps
     return press

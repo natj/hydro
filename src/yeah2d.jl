@@ -7,6 +7,8 @@ include("eos.jl")
 include("reconstr.jl")
 include("solvers.jl")
 
+using Winston
+
 #2-dim
 function prim2con(rho::AbstractMatrix,
                   velx::AbstractMatrix,
@@ -67,7 +69,7 @@ end
 function visualize(hyd)
 
     #println(hyd.rho)
-    cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
+    cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
 
     #rho
     hdata = hyd.rho
@@ -76,6 +78,7 @@ function visualize(hyd)
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p1, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    setattr(p1, title="rho")
 
     #pressure
     hdata = hyd.press
@@ -84,6 +87,7 @@ function visualize(hyd)
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p2, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    setattr(p2, title="press")
 
     #vel
     hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)
@@ -92,20 +96,22 @@ function visualize(hyd)
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p3, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    setattr(p3, title="vel")
 
     #eps
     hdata = hyd.eps
     p4=FramedPlot()
-    #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 1.0)
+    clims = (minimum(hdata), maximum(hdata))
+    #clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p4, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    setattr(p4, title="eps")
 
-    t = Table(1,4)
+    t = Table(2,2)
     t[1,1] = p1
     t[1,2] = p2
-    t[1,3] = p3
-    t[1,4] = p4
+    t[2,1] = p3
+    t[2,2] = p4
     display(t)
 
 end
@@ -185,20 +191,20 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 50
-ny = 200
-tend = 10.0
+nx = 128
+ny = 128
+tend = 0.2
 
 #initialize
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 5.0)
+hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 0.5)
 
 #set up initial data
-hyd = setup_taylor(hyd)
+#hyd = setup_taylor(hyd)
 #hyd = setup_blast(hyd)
-#hyd = setup_tubey(hyd)
+hyd = setup_tubexy(hyd)
 
 #main integration loop
 hyd = evolve(hyd, tend, gamma, cfl, nx, ny)

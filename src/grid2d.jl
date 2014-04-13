@@ -48,9 +48,9 @@ type data1d
         pressp = zeros(nzones)
         pressm = zeros(nzones)
 
-        q = zeros(nzones,3)
-        qp = zeros(nzones,3)
-        qm = zeros(nzones,3)
+        q = zeros(nzones, 3)
+        qp = zeros(nzones, 3)
+        qm = zeros(nzones, 3)
         n = nzones
         g = 3
 
@@ -172,7 +172,7 @@ end
 
 
 #2-dim grid
-function grid_setup(self, xmin, xmax, ymin, ymax)
+function grid_setup(self::data2d, xmin, xmax, ymin, ymax)
     dx = (xmax - xmin) / (self.nx -self.g*2 - 1)
     dy = (ymax - ymin) / (self.ny -self.g*2 - 1)
 
@@ -204,7 +204,7 @@ function grid_setup(self, xmin, xmax, ymin, ymax)
 end
 
 #Shoctube initial data
-function setup_tubey(self)
+function setup_tubey(self::data2d)
     rchange = 0.5(self.y[self.ny - self.g] - self.y[self.g + 1])
 
     rho1 = 1.0
@@ -233,7 +233,7 @@ function setup_tubey(self)
 end
 
 #Shoctube initial data
-function setup_tubex(self)
+function setup_tubex(self::data2d)
     rchange = 0.5(self.x[self.nx - self.g] - self.x[self.g + 1])
     #println("rchange=$rchange")
     rho1 = 1.0
@@ -261,12 +261,40 @@ function setup_tubex(self)
 end
 
 #Shoctube initial data
-function setup_blast(self)
+function setup_tubexy(self::data2d)
+
+    @assert hyd.x[1] == hyd.y[1]
+    @assert hyd.x[end] == hyd.y[end]
+    @assert hyd.nx == hyd.ny
+
+    rho1 = 1.0
+    rho2 = 0.125
+    press1 = 1.0
+    press2 = 0.1
+
+    self.rho[:,:] = rho1
+    self.press[:,:] = press1
+    self.eps[:,:] = press1/rho1/(gamma - 1.0)
+
+    for i = 1:self.ny
+        for j = 1:i
+                self.rho[i, j] = rho2
+                self.press[i, j] = press2
+                self.eps[i, j] = press2/rho2/(gamma - 1.0)
+            end
+        end
+
+    return self
+end
+
+
+#Shoctube initial data
+function setup_blast(self::data2d)
     #rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
 
-    rho1 = 0.1
-    press1 = 0.1
-    press2 = 1.0
+    rho1 = 0.01
+    press1 = 0.01
+    press2 = 100.0
 
     self.rho[:,:] = rho1*ones(self.ny, self.nx)
     self.press[:,:] = press1*ones(self.ny, self.nx)
@@ -283,7 +311,7 @@ function setup_blast(self)
 end
 
 #Shoctube initial data
-function setup_taylor(self)
+function setup_taylor(self::data2d)
     rchange = int(0.8self.ny)
 
     rho1 = 0.8
@@ -320,7 +348,7 @@ end
 
 
 
-function apply_bcs(hyd)
+function apply_bcs(hyd::data2d)
 
     #arrays starting from zero
     #       |g                  |n-g #

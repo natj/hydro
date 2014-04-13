@@ -1,6 +1,7 @@
 #YEt Another Hydro code
 # 1-dim (backup)
 
+using Winston
 
 #basic parameters
 gamma = 1.4
@@ -11,87 +12,12 @@ dtp = dt
 nzones = 200
 tend = 0.2
 
-# Setup data type for variables
-type data1d
-    x::Array{Float64,1} #cell centers
-    xi::Array{Float64,1} #cell LEFT interfaces
 
-    rho::Array{Float64,1}
-    rhop::Array{Float64,1}
-    rhom::Array{Float64,1}
-
-    vel::Array{Float64,1}
-    velp::Array{Float64,1}
-    velm::Array{Float64,1}
-
-    eps::Array{Float64,1}
-    epsp::Array{Float64,1}
-    epsm::Array{Float64,1}
-
-    press::Array{Float64,1}
-    pressp::Array{Float64,1}
-    pressm::Array{Float64,1}
-
-    q::Array{Float64,2} #conserved quantities
-    qp::Array{Float64,2}
-    qm::Array{Float64,2}
-
-    n::Int64
-    g::Float64 #ghost cells
-
-    function data1d(nzones::Int64)
-
-        x = zeros(nzones)
-        xi = zeros(nzones)
-
-        rho = zeros(nzones)
-        rhop = zeros(nzones)
-        rhom = zeros(nzones)
-
-        vel = zeros(nzones)
-        velp = zeros(nzones)
-        velm = zeros(nzones)
-
-        eps = zeros(nzones)
-        epsp = zeros(nzones)
-        epsm = zeros(nzones)
-
-        press = zeros(nzones)
-        pressp = zeros(nzones)
-        pressm = zeros(nzones)
-
-        q = zeros(3,nzones)
-        qp = zeros(3,nzones)
-        qm = zeros(3,nzones)
-        n = nzones
-        g = 3
-
-        new(x,
-            xi,
-            rho,
-            rhop,
-            rhom,
-            vel,
-            velp,
-            velm,
-            eps,
-            epsp,
-            epsm,
-            press,
-            pressp,
-            pressm,
-            q,
-            qp,
-            qm,
-            n,
-            g)
-    end
-end
-
+include("grid2d.jl")
 
 
 #1-dim grid
-function grid_setup(self, xmin, xmax)
+function grid_setup(self::data1d, xmin, xmax)
     dx = (xmax - xmin) / (self.n -self.g*2 - 1)
     xmin = xmin - self.g*dx
     xmax = xmax + self.g*dx
@@ -108,7 +34,7 @@ function grid_setup(self, xmin, xmax)
 end
 
 #Shoctube initial data
-function setup_tube(self)
+function setup_tube(self::data1d)
     rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
 
     rho1 = 1.0
@@ -135,7 +61,7 @@ end
 
 
 #Shoctube initial data
-function setup_blast(self)
+function setup_blast(self::data1d)
     #rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
 
     rho1 = 0.4
@@ -154,7 +80,7 @@ function setup_blast(self)
     return self
 end
 
-function apply_bcs(hyd)
+function apply_bcs(hyd::data1d)
 
     #arrays starting from zero
     #       |g                  |n-g #
@@ -197,19 +123,19 @@ function prim2con(rho::AbstractVector,
                   vel::AbstractVector,
                   eps::AbstractVector)
 
-    q = zeros(3, size(rho, 1))
-    q[1,:] = rho
-    q[2,:] = rho .* vel
-    q[3,:] = rho .* eps .+ 0.5rho .* vel.^2.0
+    q = zeros(size(rho, 1), 3)
+    q[:,1] = rho
+    q[:,2] = rho .* vel
+    q[:,3] = rho .* eps .+ 0.5rho .* vel.^2.0
 
     return q
 end
 
 #1-dim
 function con2prim(q)
-    rho = vec(q[1,:])
-    vel = vec(q[2,:]' ./ rho)
-    eps = vec(q[3,:]' ./ rho - 0.5vel.^2.0)
+    rho = vec(q[:,1])
+    vel = vec(q[:,2] ./ rho)
+    eps = vec(q[:,3] ./ rho - 0.5vel.^2.0)
     press = eos_press(rho, eps, gamma)
 
     return rho, eps, press, vel
@@ -217,7 +143,7 @@ end
 
 
 #time step calculation
-function calc_dt(hyd, dtp)
+function calc_dt(hyd::data1d, dtp)
     cs = sqrt(eos_cs2(hyd.rho, hyd.eps, gamma))
     dtnew = 1.0
     for i = (hyd.g+1):(hyd.n-hyd.g+1)
@@ -267,7 +193,7 @@ function tvd_mc_reconstruction(n, g, f, x, xi)
 end
 
 
-function reconstruct(hyd)
+function reconstruct(hyd::data1d)
 
     hyd.rhop, hyd.rhom = tvd_mc_reconstruction(hyd.n,
                                                hyd.g,
@@ -294,72 +220,14 @@ function reconstruct(hyd)
     return hyd
 end
 
+#Load solvers
+include("solvers.jl")
 
-#HLLE solver
-function hlle(hyd)
-    fluxdiff = zeros(3, hyd.n)
-
-    #compute eigenvalues
-    evl = zeros(3, hyd.n)
-    evr = zeros(3, hyd.n)
-    smin = zeros(hyd.n)
-    smax = zeros(hyd.n)
-    csp = sqrt(eos_cs2(hyd.rhop, hyd.epsp, gamma))
-    csm = sqrt(eos_cs2(hyd.rhom, hyd.epsm, gamma))
-
-    for i = 2:(hyd.n-1)
-        evl[1,i] = hyd.velp[i]
-        evr[1,i] = hyd.velm[i+1]
-        evl[2,i] = hyd.velp[i] - csp[i]
-        evr[2,i] = hyd.velm[i+1] - csm[i+1]
-        evl[3,i] = hyd.velp[i] + csp[i]
-        evr[3,i] = hyd.velm[i+1] +csm[i+1]
-
-        #min and max eigenvalues
-        smin[i] = min(evl[1,i], evl[2,i], evl[3,i],
-                      evr[1,i], evr[2,i], evr[3,i], 0.0)
-        smax[i] = max(evl[1,i], evl[2,i], evl[3,i],
-                      evr[1,i], evr[2,i], evr[3,i], 0.0)
-    end
-
-    #set up flux left L and right R of the interface
-    #at i+1/2
-    fluxl = zeros(3, hyd.n)
-    fluxr = zeros(3, hyd.n)
-
-    for i = 2:(hyd.n-1)
-        fluxl[1,i] = hyd.qp[1,i] * hyd.velp[i]
-        fluxl[2,i] = hyd.qp[2,i] * hyd.velp[i] + hyd.pressp[i]
-        fluxl[3,i] = (hyd.qp[3,i] + hyd.pressp[i]) * hyd.velp[i]
-
-        fluxr[1,i] = hyd.qm[1,i+1] * hyd.velm[i+1]
-        fluxr[2,i] = hyd.qm[2,i+1] * hyd.velm[i+1] + hyd.pressm[i+1]
-        fluxr[3,i] = (hyd.qm[3,i+1] + hyd.pressm[i+1]) * hyd.velm[i+1]
-    end
-
-    #solve the Riemann problem for the i+1/2 interface
-    ds = smax .- smin
-    flux = zeros(3, hyd.n)
-    for i = hyd.g:(hyd.n-hyd.g+1)
-        flux[:,i] = (smax[i]*fluxl[:,i] .- smin[i]*fluxr[:,i] .+ smax[i]*smin[i]*(hyd.qm[:,i+1] - hyd.qp[:,i])) / ds[i]
-    end
-
-    #flux difference
-    for i = (hyd.g+1):(hyd.n-hyd.g+1)
-        rm = hyd.xi[i]
-        rp = hyd.xi[i+1]
-        dxi = 1.0/(rp - rm)
-        fluxdiff[:,i] = dxi * (flux[:,i]  .- flux[:,i-1])
-    end
-
-    return fluxdiff
-end
-
-function calc_rhs(hyd)
+function calc_rhs(hyd::data1d)
     #reconstruction and prim2con
     hyd = reconstruct(hyd)
     #compute flux difference
-    fluxdiff = hlle(hyd)
+    fluxdiff = hllc(hyd)
     #return RHS = -fluxdiff
     return -fluxdiff
 end
@@ -377,7 +245,7 @@ hyd = data1d(nzones)
 hyd = grid_setup(hyd, 0.0, 1.0)
 
 #set up initial data
-hyd = setup_blast(hyd)
+hyd = setup_tube(hyd)
 
 #get initial timestep
 dt = calc_dt(hyd, dt)
