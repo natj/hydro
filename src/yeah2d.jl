@@ -71,40 +71,48 @@ function visualize(hyd)
     #println(hyd.rho)
     cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
 
-    #rho
-    hdata = hyd.rho
+    #rho     for j = (hyd.g+1):(hyd.ny-hyd.g+1)
+    hdata = hyd.rho[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p1, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    add(p1, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
+    setattr(p1, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
+    setattr(p1, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
     setattr(p1, title="rho")
 
     #pressure
-    hdata = hyd.press
+    hdata = hyd.press[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
     p2=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p2, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    add(p2, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
+    setattr(p2, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
+    setattr(p2, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
     setattr(p2, title="press")
 
     #vel
-    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)
+    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
     p3=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
     clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p3, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    add(p3, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
+    setattr(p3, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
+    setattr(p3, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
     setattr(p3, title="vel")
 
     #eps
-    hdata = hyd.eps
+    hdata = hyd.eps[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
     p4=FramedPlot()
     clims = (minimum(hdata), maximum(hdata))
     #clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
-    add(p4, Image((hyd.x[1], hyd.x[end]), (hyd.y[1], hyd.y[end]), img;))
+    add(p4, Image((hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]), (hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]), img;))
+    setattr(p4, xrange=(hyd.x[hyd.g+1], hyd.x[hyd.nx-hyd.g]))
+    setattr(p4, yrange=(hyd.y[hyd.g+1], hyd.y[hyd.ny-hyd.g]))
     setattr(p4, title="eps")
 
     t = Table(2,2)
