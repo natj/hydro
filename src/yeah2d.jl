@@ -192,19 +192,19 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 200
+nx = 100
 ny = 200
-tend = 0.003
+tend = 0.001
 
 #initialize
 hyd = data2d(nx, ny)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 0.25, 0.0, 0.25)
+hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 2.0)
 
 #set up initial data
-#hyd = setup_taylor(hyd)
-hyd = setup_blast(hyd)
+hyd = setup_taylor(hyd)
+#hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
 
 visualize(hyd)

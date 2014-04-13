@@ -326,12 +326,12 @@ end
 function setup_taylor(self::data2d)
     rchange = int(0.8self.ny)
 
-    rho1 = 0.8
-    rho2 = 0.1
+    rho1 = 0.9
+    rho2 = 0.01
     press1 = 0.1
 
-    self.rho[1:rchange, :] = rho2*ones(rchange, self.nx)
-    self.rho[(rchange+1):(self.ny), :] = rho1*ones((self.ny-rchange), self.nx)
+    self.rho[1:(rchange-1), :] = rho2*ones(rchange-1, self.nx)
+    self.rho[rchange:(self.ny), :] = rho1*ones((self.ny-rchange)+1, self.nx)
 
     self.press[:,:] = press1*ones(self.ny, self.nx)
     self.eps[:,:] = press1./rho1./(gamma - 1.0)
@@ -339,11 +339,19 @@ function setup_taylor(self::data2d)
     self.velx[:,:] = zeros(self.ny, self.nx)
     self.vely[:,:] = zeros(self.ny, self.nx)
 
-    offs = 22
+
+    offs = 30
+    offsy= 15
     dx = self.x[self.nx-offs-1] - self.x[offs]
 
-    for j = rchange:self.ny
-        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.9sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+    function siny(j)
+        sin(pi*(self.y[j]-self.y[rchange-offsy])/(self.y[rchange+offsy]-self.y[rchange-offsy]))
+    end
+
+
+#    for j = rchange:self.ny
+    for j = (rchange-offsy):(rchange+offsy)
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.5siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 
     return self
