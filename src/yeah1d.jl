@@ -62,7 +62,6 @@ end
 
 #Shoctube initial data
 function setup_blast(self::data1d)
-    #rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
 
     rho1 = 0.4
     press1 = 0.2
@@ -255,9 +254,6 @@ hyd.q = prim2con(hyd.rho, hyd.vel, hyd.eps)
 
 t = 0.0
 i = 1
-
-#display
-#plot(hyd.x, hyd.rho, "r-")
 
 while t < tend
 

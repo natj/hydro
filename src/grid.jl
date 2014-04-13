@@ -235,7 +235,7 @@ end
 #Shoctube initial data
 function setup_tubex(self::data2d)
     rchange = 0.5(self.x[self.nx - self.g] - self.x[self.g + 1])
-    #println("rchange=$rchange")
+
     rho1 = 1.0
     rho2 = 0.125
     press1 = 1.0
@@ -290,7 +290,6 @@ end
 
 #Shoctube initial data
 function setup_blast(self::data2d)
-    #rchange = 0.5(self.x[self.n - self.g] - self.x[self.g + 1])
 
     rho1 = 0.01
     press1 = 0.01
@@ -317,12 +316,6 @@ function setup_taylor(self::data2d)
     rho1 = 0.8
     rho2 = 0.1
     press1 = 0.1
-
-    #println("$(self.y[self.ny - self.g])")
-    #println("$(self.y[self.g + 1])")
-
-    #println("rchange= ", rchange)
-    #println("$((rchange+1):self.ny)")
 
     self.rho[1:rchange, :] = rho2*ones(rchange, self.nx)
     self.rho[(rchange+1):(self.ny), :] = rho1*ones((self.ny-rchange), self.nx)

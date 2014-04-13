@@ -81,10 +81,11 @@ function hllc(hyd::data1d)
 
     for i = 2:(hyd.n-1)
         #min and max eigenvalues
-        #m = r
-        #p = l
-        #min = l
-        #max = r
+
+        #minus = right
+        #plus = left
+        #min = left
+        #max = right
 
         smin[i] = min(hyd.velp[i],   hyd.velp[i] - csp[i],     hyd.velp[i] + csp[i],
                       hyd.velm[i+1], hyd.velm[i+1] - csm[i+1], hyd.velm[i+1] +csm[i+1])
@@ -112,26 +113,6 @@ function hllc(hyd::data1d)
     #solve the Riemann problem for the i+1/2 interface
     ds = smax .- smin
     flux = zeros(hyd.n, 3)
-
-#    ! Compute star region states, 10.33 of Toro
-#    USL(1) = DL*(SL-UL)/(SL-SS)
-#    USL(2) = DL*(SL-UL)/(SL-SS)*SS
-#    USL(3) = DL*(SL-UL)/(SL-SS)*(EL/DL+(SS-UL)*(SS+PL/(DL*(SL-UL))))
-#    USR(1) = DR*(SR-UR)/(SR-SS)
-#    USR(2) = DR*(SR-UR)/(SR-SS)*SS
-#    USR(3) = DR*(SR-UR)/(SR-SS)*(ER/DR+(SS-UR)*(SS+PR/(DR*(SR-UR))))
-
-#    ! Computer intercell fluxes; 10.34 of Toro
-#    IF (SL>=0) THEN
-#      FC(I,:) = FL(:)
-#    ELSEIF ((SL<=0).AND.(SS>=0)) THEN
-#      FC(I,:) = FL(:)+SL*(USL(:)-UUL(:))
-#    ELSEIF ((SS<=0).AND.(SR>=0)) THEN
-#      FC(I,:) = FR(:)+SR*(USR(:)-UUR(:))
-#    ELSEIF (SR<=0) THEN
-#      FC(I,:) = FR(:)
-#    END IF
-
 
     for i = hyd.g:(hyd.n-hyd.g+1)
         if smin[i] >= 0.0
@@ -204,12 +185,10 @@ function hllc(hyd::data1d)
 end
 
 
-
 #x-sweep
 function xsweep(hyd::data2d)
     fluxdiff = zeros(hyd.ny, hyd.nx, 4)
     for j = (hyd.g+1):(hyd.ny-hyd.g+1)
-        #println("x  j=$j")
         hyd1 = splice(hyd, j, 1)
         fluxdiffi = hllc(hyd1)
 
@@ -226,7 +205,6 @@ end
 function ysweep(hyd::data2d)
     fluxdiff = zeros(hyd.ny, hyd.nx, 4)
     for j = (hyd.g+1):(hyd.nx-hyd.g+1)
-        #println("y  j=$j")
         hyd1 = splice(hyd, j, 2)
         fluxdiffi = hllc(hyd1)
 
@@ -253,7 +231,6 @@ end
 
 
 #Split 2-dimensional flux
-#Strang splitting
 function sflux(hyd::data2d, dt, iter)
 
     hyd2 = hyd

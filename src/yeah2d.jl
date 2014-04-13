@@ -50,7 +50,6 @@ function calc_dt(hyd, dtp)
 
     dtnew = min(cfl*dtnew, 1.05*dtp)
 
-    #dtnew = max(dtnew, 1.0e-5)
     return dtnew
 end
 
@@ -68,10 +67,8 @@ end
 
 function visualize(hyd)
 
-    #println(hyd.rho)
     cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
 
-    #rho     for j = (hyd.g+1):(hyd.ny-hyd.g+1)
     hdata = hyd.rho[(hyd.g+1):(hyd.ny-hyd.g), (hyd.g+1):(hyd.nx-hyd.g)]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
@@ -142,20 +139,11 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
     t = 0.0
     i = 1
 
-    #display
-    #plot(hyd.x, hyd.rho, "r-")
     visualize(hyd)
-
 
     while t < tend
         if i % 10 == 0
-            #sleep(1.0)
-            #output
-            println("$i $t $dt")
-    #        p=plot(hyd.x, hyd.rho, "r-")
-    #        p=oplot(hyd.x, hyd.vel, "b-")
-    #        p=oplot(hyd.x, hyd.press, "g-")
-    #        display(p)
+             println("$i $t $dt")
             visualize(hyd)
         end
 
@@ -188,7 +176,7 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         t += dt
         i += 1
 
-        #if i > 10; break; end
+        #if i > 100; break; end
     end
 
     return hyd
