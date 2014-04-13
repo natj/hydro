@@ -2,7 +2,7 @@
 #2-dim
 
 
-include("grid2d.jl")
+include("grid.jl")
 include("eos.jl")
 include("reconstr.jl")
 include("solvers.jl")

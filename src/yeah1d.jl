@@ -13,7 +13,7 @@ nzones = 200
 tend = 0.2
 
 
-include("grid2d.jl")
+include("grid.jl")
 
 
 #1-dim grid
