@@ -6,6 +6,7 @@ include("grid.jl")
 include("eos.jl")
 include("reconstr.jl")
 include("solvers.jl")
+include("gravity.jl")
 
 using Winston
 
@@ -65,9 +66,31 @@ function calc_rhs(hyd, dt, iter)
     return -fluxdiff
 end
 
-function visualize(hyd)
+function visualize(data::AbstractMatrix, xmin, ymin, xmax, ymax; g=1)
 
     cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+
+    ny, nx = size(data)
+    xs = g
+    xe = nx - g
+    ye = ny - g
+
+    hdata = data[xs:ye, xs:xe]
+    p = FramedPlot()
+    clims = (minimum(hdata), maximum(hdata))
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(p, Image((xmin, xmax), (ymin, ymax), img;))
+    setattr(p, xrange=(xmin, xmax))
+    setattr(p, yrange=(ymin, ymax))
+    display(p)
+    return p
+end
+
+function visualize(hyd::data2d)
+
+    cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+    #cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
+
 
     xs = hyd.g
     xe = hyd.nx-hyd.g-1
@@ -77,7 +100,8 @@ function visualize(hyd)
     hdata = hyd.rho[xs:ye, xs:xe]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 1.0)
+    #clims = (0.0, 1.0)
+    clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
     setattr(p1, xrange=(hyd.x[xs], hyd.x[xe]))
@@ -88,7 +112,8 @@ function visualize(hyd)
     hdata = hyd.press[xs:ye, xs:xe]
     p2=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 1.0)
+    #clims = (0.0, 1.0)
+    clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p2, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
     setattr(p2, xrange=(hyd.x[xs], hyd.x[xe]))
@@ -99,7 +124,8 @@ function visualize(hyd)
     hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
     p3=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 1.0)
+    clims = (0.0, maximum(hdata))
+    #clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p3, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
     setattr(p3, xrange=(hyd.x[xs], hyd.x[xe]))
@@ -109,8 +135,9 @@ function visualize(hyd)
     #eps
     hdata = hyd.eps[xs:ye, xs:xe]
     p4=FramedPlot()
-    clims = (minimum(hdata), maximum(hdata))
+    #clims = (minimum(hdata), maximum(hdata))
     #clims = (0.0, 1.0)
+    clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p4, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
     setattr(p4, xrange=(hyd.x[xs], hyd.x[xe]))
@@ -148,9 +175,17 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
 
     while t < tend
         if i % 10 == 0
-             println("$i $t $dt")
+            println("$i $t $dt")
             visualize(hyd)
         end
+
+        #add self-gravity
+        gxflx, gyflx = selfgravity(hyd.rho, hyd.nx, hyd.ny, r32x, r32y)
+        #gxflx, gyflx = gravity(hyd.rho, hyd.nx, hyd.ny)
+
+        hyd.eps += abs(hyd.velx .* gxflx .+ hyd.vely .* gyflx)
+        hyd.velx += gxflx
+        hyd.vely += gyflx
 
         #calculate new timestep
         dt = calc_dt(hyd, dt)
@@ -192,20 +227,23 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 100
+nx = 200
 ny = 200
-tend = 0.001
+tend = 10.0
 
 #initialize
 hyd = data2d(nx, ny)
+r32x, r32y = r32kernel(hyd.x, hyd.y)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 2.0)
+hyd = grid_setup(hyd, 0.0, 0.5, 0.0, 0.5)
 
 #set up initial data
-hyd = setup_taylor(hyd)
+#hyd = setup_taylor(hyd)
 #hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
+#hyd = setup_tubey(hyd)
+hyd = setup_collision(hyd)
 
 visualize(hyd)
 

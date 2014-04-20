@@ -323,12 +323,59 @@ function setup_blast(self::data2d)
 end
 
 #Shoctube initial data
+function setup_collision(self::data2d)
+
+    rho1 = 0.01
+    rho2 = 10.0
+    press1 = 0.01
+
+    self.rho[:,:] = rho1*ones(self.ny, self.nx)
+    self.press[:,:] = press1*ones(self.ny, self.nx)
+    self.eps[:,:] = press1./rho1./(gamma - 1.0)
+    self.velx[:,:] = zeros(self.ny, self.nx)
+    self.vely[:,:] = zeros(self.ny, self.nx)
+
+    #first ball
+    midx = int(self.nx/2)
+    midy = int(0.4self.ny)
+
+    #circle=[1,3,4,4,5,5]
+    #circle=[2,4,5,6,6,6,7,7]
+    circle=[3,5,6,7,8,9,9,10,10,10]
+    N = length(circle)
+    for j = 0:N-1
+        yy = j
+        xx = circle[N-j]
+
+        self.rho[midy+yy, midx-xx:midx+xx] = rho2
+        self.rho[midy-yy, midx-xx:midx+xx] = rho2
+    end
+
+    #second ball
+    midx = int(self.nx/2)
+    midy = int(0.6self.ny)
+    #circle=[1,3,4,4,5,5]
+    #circle=[2,4,5,6,6,6,7,7]
+    circle=[3,5,6,7,8,9,9,10,10,10]
+    N = length(circle)
+    for j = 0:N-1
+        yy = j
+        xx = circle[N-j]
+
+        self.rho[midy+yy, midx-xx:midx+xx] = rho2
+        self.rho[midy-yy, midx-xx:midx+xx] = rho2
+    end
+
+    return self
+end
+
+#Taylor instability initial data
 function setup_taylor(self::data2d)
     rchange = int(0.8self.ny)
 
-    rho1 = 0.9
+    rho1 = 10.0
     rho2 = 0.01
-    press1 = 0.1
+    press1 = 0.01
 
     self.rho[1:(rchange-1), :] = rho2*ones(rchange-1, self.nx)
     self.rho[rchange:(self.ny), :] = rho1*ones((self.ny-rchange)+1, self.nx)
@@ -340,8 +387,8 @@ function setup_taylor(self::data2d)
     self.vely[:,:] = zeros(self.ny, self.nx)
 
 
-    offs = 30
-    offsy= 15
+    offs = 20
+    offsy= 5
     dx = self.x[self.nx-offs-1] - self.x[offs]
 
     function siny(j)
@@ -350,8 +397,10 @@ function setup_taylor(self::data2d)
 
 
 #    for j = rchange:self.ny
+
     for j = (rchange-offsy):(rchange+offsy)
         self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.5siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+#        self.vely[j, offs:(self.nx-offs-1)] = Float64[-10.0sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 
     return self
