@@ -76,7 +76,7 @@ function hllc(hyd::data1d)
     smin = zeros(hyd.n)
     smax = zeros(hyd.n)
     smid = zeros(hyd.n)
-        csp = sqrt(eos_cs2(hyd.rhop, hyd.epsp, gamma))
+    csp = sqrt(eos_cs2(hyd.rhop, hyd.epsp, gamma))
     csm = sqrt(eos_cs2(hyd.rhom, hyd.epsm, gamma))
 
     for i = 2:(hyd.n-1)

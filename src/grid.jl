@@ -291,9 +291,9 @@ end
 #Shoctube initial data
 function setup_blast(self::data2d)
 
-    rho1 = 0.01
-    press1 = 0.01
-    press2 = 100.0
+    rho1 = 1.0
+    press1 = 0.1
+    press2 = 10.0
 
     self.rho[:,:] = rho1*ones(self.ny, self.nx)
     self.press[:,:] = press1*ones(self.ny, self.nx)
@@ -322,12 +322,13 @@ function setup_blast(self::data2d)
     return self
 end
 
-#Shoctube initial data
+#Two colliding spheres
 function setup_collision(self::data2d)
 
     rho1 = 0.01
     rho2 = 10.0
     press1 = 0.01
+    vel2 = 2.0
 
     self.rho[:,:] = rho1*ones(self.ny, self.nx)
     self.press[:,:] = press1*ones(self.ny, self.nx)
@@ -337,7 +338,7 @@ function setup_collision(self::data2d)
 
     #first ball
     midx = int(self.nx/2)
-    midy = int(0.4self.ny)
+    midy = int(0.25self.ny)
 
     #circle=[1,3,4,4,5,5]
     #circle=[2,4,5,6,6,6,7,7]
@@ -349,11 +350,15 @@ function setup_collision(self::data2d)
 
         self.rho[midy+yy, midx-xx:midx+xx] = rho2
         self.rho[midy-yy, midx-xx:midx+xx] = rho2
+
+        self.vely[midy+yy, midx-xx:midx+xx] = vel2
+        self.vely[midy-yy, midx-xx:midx+xx] = vel2
+
     end
 
     #second ball
     midx = int(self.nx/2)
-    midy = int(0.6self.ny)
+    midy = int(0.75self.ny)
     #circle=[1,3,4,4,5,5]
     #circle=[2,4,5,6,6,6,7,7]
     circle=[3,5,6,7,8,9,9,10,10,10]
@@ -364,17 +369,57 @@ function setup_collision(self::data2d)
 
         self.rho[midy+yy, midx-xx:midx+xx] = rho2
         self.rho[midy-yy, midx-xx:midx+xx] = rho2
+
+        self.vely[midy+yy, midx-xx:midx+xx] = -vel2
+        self.vely[midy-yy, midx-xx:midx+xx] = -vel2
     end
 
     return self
 end
 
+#One free falling spheres
+function setup_fall(self::data2d)
+
+    rho1 = 1.0
+    rho2 = 2.0
+    press1 = 2.5
+    press2 = 1.25
+
+    self.rho[:,:] = rho1*ones(self.ny, self.nx)
+    self.press[:,:] = press1*ones(self.ny, self.nx)
+    self.eps[:,:] = press1./rho1./(gamma - 1.0)
+    self.velx[:,:] = zeros(self.ny, self.nx)
+    self.vely[:,:] = zeros(self.ny, self.nx)
+
+    #first ball
+    midx = int(self.nx/2)
+    midy = int(0.8self.ny)
+
+    #circle=[1,3,4,4,5,5]
+    #circle=[2,4,5,6,6,6,7,7]
+    circle=[3,5,6,7,8,9,9,10,10,10]
+    N = length(circle)
+    for j = 0:N-1
+        yy = j
+        xx = circle[N-j]
+
+        self.rho[midy+yy, midx-xx:midx+xx] = rho2
+        self.rho[midy-yy, midx-xx:midx+xx] = rho2
+
+        self.press[midy+yy, midx-xx:midx+xx] = press2
+        self.press[midy-yy, midx-xx:midx+xx] = press2
+    end
+
+    return self
+end
+
+
 #Taylor instability initial data
 function setup_taylor(self::data2d)
     rchange = int(0.8self.ny)
 
-    rho1 = 10.0
-    rho2 = 0.01
+    rho1 = 2.0
+    rho2 = 1.0
     press1 = 0.01
 
     self.rho[1:(rchange-1), :] = rho2*ones(rchange-1, self.nx)
@@ -399,7 +444,7 @@ function setup_taylor(self::data2d)
 #    for j = rchange:self.ny
 
     for j = (rchange-offsy):(rchange+offsy)
-        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.5siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-1.5siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
 #        self.vely[j, offs:(self.nx-offs-1)] = Float64[-10.0sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 

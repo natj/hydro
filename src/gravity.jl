@@ -1,10 +1,10 @@
 #Gravity related stuff
 
-function gravity(rho::AbstractMatrix,
-                 nx::Int64,
-                 ny::Int64;
-                 gx=0.0,
-                 gy=-5.0)
+function ygravity(rho::AbstractMatrix,
+                  nx::Int64,
+                  ny::Int64;
+                  gx=0.0,
+                  gy=5.0)
 
     gxflux = gx .* rho
     gyflux = gy .* rho
@@ -76,6 +76,5 @@ function selfgravity(rho::AbstractMatrix,
 
     return gxflux, gyflux
 end
-
 
 
