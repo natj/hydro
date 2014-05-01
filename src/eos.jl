@@ -17,6 +17,7 @@ function eos_cs2(rho, eps, gamma)
     dpdrho = (gamma - 1.0) .* eps
     cs2 = dpdrho .+ dpde .* prs ./ (rho + 1.0e-30).^2.0
 
+    cs2 = clamp(cs2, 1.0e-10, 1.0e10)
 
     for i = 1:length(cs2)
         if cs2[i] < 0.0

@@ -247,7 +247,34 @@ function sflux(hyd::data2d, dt, iter)
 end
 
 
+function uflux(hyd::data2d, dt)
 
+    #transverse fluxes
+    fx = xsweep(hyd)
+    fy = ysweep(hyd)
+
+    # U_xl[i,j,:] = U_xl[i,j,:] - 0.5*dt/dy * (F_y[i-1,j+1,:] - F_y[i-1,j,:])
+    # U_xr[i,j,:] = U_xr[i,j,:] - 0.5*dt/dy * (F_y[i,j+1,:] - F_y[i,j,:])
+
+    # U_yl[i,j,:] = U_yl[i,j,:] - 0.5*dt/dx * (F_x[i+1,j-1,:] - F_x[i,j-1,:])
+    # U_yr[i,j,:] = U_yr[i,j,:] - 0.5*dt/dx * (F_x[i+1,j,:] - F_x[i,j,:])
+
+    for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
+        for k = 1:4
+            hyd.qp[j,i,k,1] -= 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])
+            hyd.qm[j,i,k,1] -= 0.5dt*(fy[j+1, i, k] - fy[j, i, k])
+
+            hyd.qp[j,i,k,2] -= 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])
+            hyd.qm[j,i,k,2] -= 0.5dt*(fx[j, i+1, k] - fx[j, i, k])
+        end
+    end
+
+    fx = xsweep(hyd)
+    fy = ysweep(hyd)
+
+    return fx .+ fy
+
+end
 
 
 

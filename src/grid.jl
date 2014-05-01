@@ -444,7 +444,7 @@ function setup_taylor(self::data2d)
 #    for j = rchange:self.ny
 
     for j = (rchange-offsy):(rchange+offsy)
-        self.vely[j, offs:(self.nx-offs-1)] = Float64[-1.5siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-3.0siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
 #        self.vely[j, offs:(self.nx-offs-1)] = Float64[-10.0sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
 

@@ -32,7 +32,7 @@ function visualize(hyd::data2d)
     hdata = hyd.rho[xs:ye, xs:xe]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 15.0)
+    clims = (0.0, 2.0)
     #clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
@@ -40,8 +40,12 @@ function visualize(hyd::data2d)
     setattr(p1, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p1, title="rho")
 
+    rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = 1:hyd.nx]
 
-    p11=plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
+    #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
+    p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
+    p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
+    p11 = oplot(hyd.y, rhoxy, "b;")
     #p11=oplot(hyd.y, sqrt(hyd.velx[:,25].^2.0 .+ hyd.vely[:,25].^2.0), "g-")
     #p11=plot(hyd.y, hyd.vely[:,25], "g-")
     #p11=oplot(hyd.y, hyd.press[:,25], "b-")

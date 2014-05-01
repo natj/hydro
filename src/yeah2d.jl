@@ -22,6 +22,7 @@ function prim2con(rho::AbstractMatrix,
     q[:, :, 2] = rho .* velx
     q[:, :, 3] = rho .* vely
     q[:, :, 4] = rho .* eps .+ 0.5rho .* (velx.^2.0 + vely.^2.0)
+    #q[:, :, 4] = clamp(q[:,:,4], 1.0e-10, 1.0e10)
 
     return q
 end
@@ -33,8 +34,9 @@ function con2prim(q)
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
     eps = q[:, :, 4] ./ rho - 0.5(velx.^2.0 + vely.^2.0)
+    eps = clamp(eps, 1.0e-10, 1.0e10)
 
-    for i = 1:100, j = 1:100
+    for i = 1:50, j = 1:100
         if eps[j, i] < 0.0
             println("eps = $(eps[j, i]) i=$i j=$j")
             println("$(q[j, i, 4]) $(rho[j,i]) $(0.5(velx[j,i]^2.0 + vely[j,i]^2.0)) ")
@@ -76,15 +78,15 @@ function source_terms(hyd::data2d, dt)
 
     #+
     gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
-    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
     hyd.velxp[:,:,dir] += 0.5*gxflx
     hyd.velyp[:,:,dir] += 0.5*gyflx
+    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
 
     #-
     gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
-    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
     hyd.velxm[:,:,dir] += 0.5*gxflx
     hyd.velym[:,:,dir] += 0.5*gyflx
+    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
 
 
     #y-dir
@@ -92,15 +94,15 @@ function source_terms(hyd::data2d, dt)
 
     #+
     gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
-    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
     hyd.velxp[:,:,dir] += 0.5*gxflx
     hyd.velyp[:,:,dir] += 0.5*gyflx
+    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
 
     #-
     gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
-    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
     hyd.velxm[:,:,dir] += 0.5*gxflx
     hyd.velym[:,:,dir] += 0.5*gyflx
+    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
 
 
     return hyd
@@ -164,10 +166,13 @@ function calc_rhs(hyd, dt, iter)
     #hyd = source_terms(hyd, dt)
 
     #compute flux difference
-    fluxdiff = ssyflux(hyd, dt, iter)
+    #fluxdiff = sflux(hyd, dt, iter)
+    fluxdiff = uflux(hyd, dt)
 
     #add artificial viscosity
     fluxdiff += artificial_viscosity(hyd, dt)
+
+    #hyd = source_terms(hyd, 2.0dt)
 
     #return RHS = -fluxdiff
     return -fluxdiff
@@ -197,10 +202,10 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
 
     while t < tend
 
-        #if i % 10 == 0
+        if i % 10 == 0
             println("$i $t $dt")
             visualize(hyd)
-        #end
+        end
 
         #calculate new timestep
         dt = calc_dt(hyd, dt)
@@ -209,23 +214,31 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         hydold = hyd
         qold = hyd.q
 
+        dt=2.0dt
+
         #calc rhs
         k1 = calc_rhs(hyd, 0.5dt, i)
         #calculate intermediate step
         hyd.q = qold + 0.5dt*k1
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+
+        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+hydold.rho[:,:]), hyd.nx, hyd.ny)
+        #hyd.velx[:,:] -= 0.5dt*gxflx
+        #hyd.vely[:,:] -= 0.5dt*gyflx
+        #hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+
         #boundaries
         hyd = apply_bcs(hyd)
 
         #calc rhs
-        k2 = calc_rhs(hyd, dt, i)
+        #k2 = calc_rhs(hyd, dt, i)
         #apply update
-        hyd.q = qold + dt*(0.5k1 + 0.5k2)
+        #hyd.q = qold + dt*(0.5k1 + 0.5k2)
         #con2prim
-        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+        #hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
         #apply bcs
-        hyd = apply_bcs(hyd)
+        #hyd = apply_bcs(hyd)
 
         #update time
         t += dt
@@ -244,7 +257,7 @@ cfl = 0.5
 
 nx = 100
 ny = 100
-tend = 10.0
+tend = 5.0
 
 #initialize
 hyd = data2d(nx, ny)
