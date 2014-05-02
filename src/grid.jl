@@ -418,6 +418,7 @@ end
 function setup_taylor(self::data2d)
     rchange = int(0.8self.ny)
 
+    grav = 0.005
     rho1 = 2.0
     rho2 = 1.0
     press1 = 0.01
@@ -432,8 +433,8 @@ function setup_taylor(self::data2d)
     self.vely[:,:] = zeros(self.ny, self.nx)
 
 
-    offs = 20
-    offsy= 5
+    offs = 35
+    offsy= 30
     dx = self.x[self.nx-offs-1] - self.x[offs]
 
     function siny(j)
@@ -443,14 +444,53 @@ function setup_taylor(self::data2d)
 
 #    for j = rchange:self.ny
 
-    for j = (rchange-offsy):(rchange+offsy)
-        self.vely[j, offs:(self.nx-offs-1)] = Float64[-3.0siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
+    #for j = (rchange-offsy):(rchange+offsy)
+    for j = (rchange):(rchange+offsy)
+
+        self.vely[j, offs:(self.nx-offs-1)] = Float64[-0.01siny(j)*sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
 #        self.vely[j, offs:(self.nx-offs-1)] = Float64[-10.0sin(pi*(self.x[n]-self.x[offs])/dx) for n = offs:(self.nx-offs-1)]
     end
+
+    for j = 1:self.ny
+        self.press[j,:] = 2.5 - self.rho[j,20]*grav*self.y[j]
+    end
+
 
     return self
 end
 
+#Taylor instability initial data according to Athena code
+function setup_taylor2(self::data2d)
+    rchange = int(0.5self.ny)
+
+    A = 0.01
+    grav = 0.005
+    rho1 = 2.0
+    rho2 = 1.0
+
+    self.rho[1:(rchange-1), :] = rho2*ones(rchange-1, self.nx)
+    self.rho[rchange:(self.ny), :] = rho1*ones((self.ny-rchange)+1, self.nx)
+
+    self.press = zeros(self.ny, self.nx)
+
+    self.velx[:,:] = zeros(self.ny, self.nx)
+    self.vely[:,:] = zeros(self.ny, self.nx)
+
+    Lx = abs(self.x[self.nx - self.g] - self.x[self.g+1])
+    Ly = abs(self.y[self.ny - self.g] - self.y[self.g+1])
+
+    for j = (self.g+1):(self.ny - self.g), i = (self.g+1):(self.nx - self.g)
+        self.vely[j,i] = A*((1.0+cos(2pi*self.x[i]/Lx)*(1.0+cos(2pi*self.y[j]/Ly))))
+    end
+
+    #set pressure to hydrostatic equiblibrium
+    for j = (self.g+1):(self.ny-self.g)
+        self.press[j,:] = 2.5 - self.rho[j,20]*grav*self.y[j]
+    end
+    self.eps[:,:] = self.press[:,:] ./ self.rho[:,:] ./ (gamma - 1.0)
+
+    return self
+end
 
 
 
