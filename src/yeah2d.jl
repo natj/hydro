@@ -21,7 +21,7 @@ function prim2con(rho::AbstractMatrix,
     q[:, :, 1] = rho
     q[:, :, 2] = rho .* velx
     q[:, :, 3] = rho .* vely
-    q[:, :, 4] = rho .* eps .+ 0.5rho .* (velx.^2.0 + vely.^2.0)
+    q[:, :, 4] = rho .* eps .+ 0.5rho .* (velx.^2.0 .+ vely.^2.0)
     #q[:, :, 4] = clamp(q[:,:,4], 1.0e-10, 1.0e10)
 
     return q
@@ -33,15 +33,15 @@ function con2prim(q)
     rho = q[:, :, 1]
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
-    eps = q[:, :, 4] ./ rho - 0.5(velx.^2.0 + vely.^2.0)
-    eps = clamp(eps, 1.0e-10, 1.0e10)
+    eps = q[:, :, 4] ./ rho .- 0.5(velx.^2.0 .+ vely.^2.0)
+    #eps = clamp(eps, 1.0e-10, 1.0e10)
 
-    for i = 1:50, j = 1:100
-        if eps[j, i] < 0.0
-            println("eps = $(eps[j, i]) i=$i j=$j")
-            println("$(q[j, i, 4]) $(rho[j,i]) $(0.5(velx[j,i]^2.0 + vely[j,i]^2.0)) ")
-        end
-    end
+    #for i = 1:50, j = 1:100
+    #    if eps[j, i] < 0.0
+    #        println("eps = $(eps[j, i]) i=$i j=$j")
+    #        println("$(q[j, i, 4]) $(rho[j,i]) $(0.5(velx[j,i]^2.0 + vely[j,i]^2.0)) ")
+    #    end
+    #end
 
 
     press = eos_press(rho, eps, gamma)
@@ -163,11 +163,11 @@ function calc_rhs(hyd, dt, iter)
     hyd = reconstruct(hyd)
 
     #apply source terms for the interfaces
-    hyd = source_terms(hyd, dt)
+    #hyd = source_terms(hyd, dt)
 
     #compute flux difference
-    fluxdiff = sflux(hyd, dt, iter)
-    #fluxdiff = uflux(hyd, dt)
+    #fluxdiff = sflux(hyd, dt, iter)
+    fluxdiff = uflux(hyd, dt)
 
     #add artificial viscosity
     #fluxdiff += artificial_viscosity(hyd, dt)
@@ -211,10 +211,9 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         dt = calc_dt(hyd, dt)
 
         #save old state
-        hydold = hyd
-        qold = hyd.q
+        #hydold = hyd
+        qold = copy(hyd.q)
 
-        dt=2.0dt
 
         #calc rhs
         k1 = calc_rhs(hyd, 0.5dt, i)
@@ -223,22 +222,22 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
 
-        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+hydold.rho[:,:]), hyd.nx, hyd.ny)
-        hyd.velx[:,:] -= 0.5dt*gxflx
-        hyd.vely[:,:] -= 0.5dt*gyflx
-        hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+hydold.rho[:,:]), hyd.nx, hyd.ny)
+        #hyd.velx[:,:] -= 0.5dt*gxflx
+        #hyd.vely[:,:] -= 0.5dt*gyflx
+        #hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
 
         #boundaries
         hyd = apply_bcs(hyd)
 
         #calc rhs
-        #k2 = calc_rhs(hyd, dt, i)
+        k2 = calc_rhs(hyd, dt, i)
         #apply update
-        #hyd.q = qold + dt*(0.5k1 + 0.5k2)
+        hyd.q = qold + dt*(0.5k1 + 0.5k2)
         #con2prim
-        #hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
         #apply bcs
-        #hyd = apply_bcs(hyd)
+        hyd = apply_bcs(hyd)
 
         #update time
         t += dt
@@ -255,21 +254,21 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 100
-ny = 300
-tend = 5.0
+nx = 50
+ny = 50
+tend = 0.4
 
 #initialize
 hyd = data2d(nx, ny)
 r32x, r32y = r32kernel(hyd.x, hyd.y)
 
 #set up grid
-hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
+hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 
 #set up initial data
-hyd = setup_taylor2(hyd)
+#hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
-#hyd = setup_tubexy(hyd)
+hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)

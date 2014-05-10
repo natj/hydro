@@ -40,17 +40,35 @@ function visualize(hyd::data2d)
     setattr(p1, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p1, title="rho")
 
-    rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = 1:hyd.nx]
+    #additional window for 1-dim figs
+    xy = Float64[sqrt(hyd.x[i]^2+hyd.y[i]^2.0) for i = 1:hyd.nx]
+    rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    velxy = Float64[sqrt(hyd.velx[hyd.nx-i+1,i]^2.0 + hyd.velx[hyd.nx-i+1,i]^2.0) for i = hyd.nx:-1:1]
+
+    velxxy = Float64[hyd.velx[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    velyxy = Float64[hyd.vely[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+
+    pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
 
     #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
-    p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
-    p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
-    p11 = oplot(hyd.y, rhoxy, "b;")
-    #p11=oplot(hyd.y, sqrt(hyd.velx[:,25].^2.0 .+ hyd.vely[:,25].^2.0), "g-")
-    #p11=plot(hyd.y, hyd.vely[:,25], "g-")
-    #p11=oplot(hyd.y, hyd.press[:,25], "b-")
-    #p11=oplot(hyd.y, hyd.eps[:,25], "r-")
+    #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
+    #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
 
+    p11 =  plot(xy, rhoxy, "r")
+    #p11 = oplot(xy, velxy, "b")
+
+    p11 = oplot(xy, -velxxy, "b-")
+    p11 = oplot(xy, velyxy, "b--")
+
+    p11 = oplot(xy, pressxy, "g")
+    #p11 = oplot(hyd.y, epsxy, "k")
+
+    #mid = int(hyd.ny/2)
+    #p11 = plot(hyd.y, hyd.rho[:,mid], "r")
+    #p11 = oplot(hyd.y, hyd.vely[:,mid], "b")
+    #p11 = oplot(hyd.y, hyd.press[:,mid], "g")
+    #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
 
     #pressure
     hdata = hyd.press[xs:ye, xs:xe]
