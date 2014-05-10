@@ -1,5 +1,6 @@
 #Reconstruction
 
+#minmod limiter
 function minmod(a,b)
     if a*b < 0.0
         return 0.0
@@ -114,6 +115,7 @@ function reconstruct(hyd::data2d)
 
   hyd.qp[:,:,:,1] = prim2con(hyd.rhop[:,:,1], hyd.velxp[:,:,1], hyd.velyp[:,:,1], hyd.epsp[:,:,1])
   hyd.qm[:,:,:,1] = prim2con(hyd.rhom[:,:,1], hyd.velxm[:,:,1], hyd.velym[:,:,1], hyd.epsm[:,:,1])
+
   hyd.qp[:,:,:,2] = prim2con(hyd.rhop[:,:,2], hyd.velxp[:,:,2], hyd.velyp[:,:,2], hyd.epsp[:,:,2])
   hyd.qm[:,:,:,2] = prim2con(hyd.rhom[:,:,2], hyd.velxm[:,:,2], hyd.velym[:,:,2], hyd.epsm[:,:,2])
 

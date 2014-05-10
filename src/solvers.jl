@@ -70,7 +70,7 @@ end
 
 #HLLC solver
 function hllc(hyd::data1d)
-    fluxdiff = zeros(hyd.n, 3)
+    fluxdiff = zeros(hyd.n, 4)
 
     #compute eigenvalues
     smin = zeros(hyd.n)
@@ -87,47 +87,56 @@ function hllc(hyd::data1d)
         #min = left
         #max = right
 
+        #     q^L_i+1/2  q^R_i+1/2
+        #
+        #   |          |             | 
+        #   |-   q_i  +|-   q_i+1   +| 
+        #   |          |             |  
+        #
+        #  i-1/2  i  i+1/2   i+1   i+3/2
+
         smin[i] = min(hyd.velp[i],   hyd.velp[i] - csp[i],     hyd.velp[i] + csp[i],
                       hyd.velm[i+1], hyd.velm[i+1] - csm[i+1], hyd.velm[i+1] +csm[i+1])
         smax[i] = max(hyd.velp[i],   hyd.velp[i] - csp[i],     hyd.velp[i] + csp[i],
                       hyd.velm[i+1], hyd.velm[i+1] - csm[i+1], hyd.velm[i+1] +csm[i+1])
+
         smid[i] = (hyd.pressm[i+1] - hyd.pressp[i] + hyd.rhop[i]*hyd.velp[i]*(smin[i] - hyd.velp[i]) - hyd.rhom[i+1]*hyd.velm[i+1]*(smax[i] - hyd.velm[i+1]))/(hyd.rhop[i]*(smin[i]-hyd.velp[i]) - hyd.rhom[i+1]*(smax[i]-hyd.velm[i+1]))
     end
 
     #set up flux left L and right R of the interface
     #at i+1/2
-    fluxl = zeros(hyd.n, 3)
-    fluxr = zeros(hyd.n, 3)
+    fluxl = zeros(hyd.n, 4)
+    fluxr = zeros(hyd.n, 4)
 
     for i = 2:(hyd.n-1)
         fluxl[i,1] = hyd.qp[i,1] * hyd.velp[i]
         fluxl[i,2] = hyd.qp[i,2] * hyd.velp[i] + hyd.pressp[i]
-        fluxl[i,3] = (hyd.qp[i,3] + hyd.pressp[i]) * hyd.velp[i]
+        fluxl[i,3] = hyd.qp[i,2] * hyd.veltp[i]
+        fluxl[i,4] = (hyd.qp[i,4] + hyd.pressp[i]) * hyd.velp[i]
 
         fluxr[i, 1] = hyd.qm[i+1, 1] * hyd.velm[i+1]
         fluxr[i, 2] = hyd.qm[i+1, 2] * hyd.velm[i+1] + hyd.pressm[i+1]
-        fluxr[i, 3] = (hyd.qm[i+1, 3] + hyd.pressm[i+1]) * hyd.velm[i+1]
+        fluxr[i, 3] = hyd.qm[i+1, 2] * hyd.veltm[i+1]
+        fluxr[i, 4] = (hyd.qm[i+1, 4] + hyd.pressm[i+1]) * hyd.velm[i+1]
     end
 
 
     #solve the Riemann problem for the i+1/2 interface
     ds = smax .- smin
-    flux = zeros(hyd.n, 3)
+    flux = zeros(hyd.n, 4)
 
     for i = hyd.g:(hyd.n-hyd.g+1)
         if smin[i] >= 0.0
+            #flux[i,:] = fluxl[i,:]
+
             flux[i,1] = fluxl[i,1]
             flux[i,2] = fluxl[i,2]
             flux[i,3] = fluxl[i,3]
+            flux[i,4] = fluxl[i,4]
+
+
         elseif smin[i] <= 0.0 && smid[i] >= 0.0
             #f_*,left
-
-            #original hllc (p_*,l = p_*,r) (not working)
-            #qsl0 = hyd.rhop[i]*((smin[i]-hyd.velp[i])/(smin[i]-smid[i]))
-            #qsl3 = hyd.epsp[i]/hyd.rhop[i]+(smid[i]-hyd.velp[i])*(smid[i]+hyd.pressp[i]/(hyd.rhop[i]*(smin[i]-hyd.velp[i])))
-            #flux[i,1] = fluxl[i,1] + smin[i]*(qsl0 - hyd.qp[i, 1])
-            #flux[i,2] = fluxl[i,2] + smin[i]*(qsl0*smid[i] - hyd.qp[i, 2])
-            #flux[i,3] = fluxl[i,3] + smin[i]*(qsl0*qsl3 - hyd.qp[i, 3])
 
             #hllc v1.1
             #flux[i,1] = smid[i]*(smin[i]*hyd.qp[i,1]-fluxl[i,1])/(smin[i]-smid[i])
@@ -138,18 +147,11 @@ function hllc(hyd::data1d)
             plr = 0.5*(hyd.pressp[i]+hyd.pressm[i+1]+hyd.rhop[i]*(smin[i]-hyd.velp[i])*(smid[i]-hyd.velp[i])+hyd.rhom[i+1]*(smax[i]-hyd.velm[i+1])*(smid[i]-hyd.velm[i+1]))
             flux[i,1] = smid[i]*(smin[i]*hyd.qp[i,1]-fluxl[i,1])/(smin[i]-smid[i])
             flux[i,2] = (smid[i]*(smin[i]*hyd.qp[i,2]-fluxl[i,2]) + smin[i]*plr)/(smin[i]-smid[i])
-            flux[i,3] = (smid[i]*(smin[i]*hyd.qp[i,3]-fluxl[i,3]) + smid[i]*smin[i]*plr)/(smin[i]-smid[i])
-
+            flux[i,3] = smid[i]*(smin[i]*hyd.qp[i,3]-fluxl[i,3])/(smin[i]-smid[i])
+            flux[i,4] = (smid[i]*(smin[i]*hyd.qp[i,4]-fluxl[i,4]) + smid[i]*smin[i]*plr)/(smin[i]-smid[i])
 
         elseif smid[i] <= 0.0 && smax[i] > 0.0
             #f_*,right
-
-            #original hllc (p_*,l = p_*,r) (not working)
-            #qsl0 = hyd.rhom[i+1]*((smax[i]-hyd.velm[i+1])/(smax[i]-smid[i]))
-            #qsl3 = (hyd.epsm[i+1]/hyd.rhom[i+1])+(smid[i]-hyd.velm[i+1])*(smid[i]+hyd.pressm[i+1]/(hyd.rhom[i+1]*(smax[i]-hyd.velm[i+1])))
-            #flux[i,1] = fluxr[i,1] + smax[i]*(qsl0 - hyd.qm[i+1, 1])
-            #flux[i,2] = fluxr[i,2] + smax[i]*(qsl0*smid[i] - hyd.qm[i+1, 2])
-            #flux[i,3] = fluxr[i,3] + smax[i]*(qsl0*qsl3 - hyd.qm[i+1, 3])
 
             #hllc v1.1
             #flux[i,1] = smid[i]*(smax[i]*hyd.qm[i+1,1]-fluxr[i,1])/(smax[i]-smid[i])
@@ -160,19 +162,22 @@ function hllc(hyd::data1d)
             plr = 0.5*(hyd.pressp[i]+hyd.pressm[i+1]+hyd.rhop[i]*(smin[i]-hyd.velp[i])*(smid[i]-hyd.velp[i])+hyd.rhom[i+1]*(smax[i]-hyd.velm[i+1])*(smid[i]-hyd.velm[i+1]))
             flux[i,1] = smid[i]*(smax[i]*hyd.qm[i+1,1]-fluxr[i,1])/(smax[i]-smid[i])
             flux[i,2] = (smid[i]*(smax[i]*hyd.qm[i+1,2]-fluxr[i,2]) + smax[i]*plr)/(smax[i]-smid[i])
-            flux[i,3] = (smid[i]*(smax[i]*hyd.qm[i+1,3]-fluxr[i,3]) + smid[i]*smax[i]*plr)/(smax[i]-smid[i])
-
+            flux[i,3] = smid[i]*(smax[i]*hyd.qm[i+1,3]-fluxr[i,3])/(smax[i]-smid[i])
+            flux[i,4] = (smid[i]*(smax[i]*hyd.qm[i+1,4]-fluxr[i,4]) + smid[i]*smax[i]*plr)/(smax[i]-smid[i])
 
         elseif smax[i] <= 0.0
+            #flux[i,:] = fluxr[i,:]
+
             flux[i,1] = fluxr[i,1]
             flux[i,2] = fluxr[i,2]
             flux[i,3] = fluxr[i,3]
+            flux[i,4] = fluxr[i,4]
         end
     end
 
 
     #flux difference
-    for j = 1:3
+    for j = 1:4
         for i = (hyd.g+1):(hyd.n-hyd.g+1)
             rm = hyd.xi[i]
             rp = hyd.xi[i+1]
@@ -181,7 +186,7 @@ function hllc(hyd::data1d)
         end
     end
 
-    return fluxdiff
+    return flux
 end
 
 
@@ -195,7 +200,8 @@ function xsweep(hyd::data2d)
         for i = 1:hyd.nx
             fluxdiff[j, i, 1] = fluxdiffi[i, 1]
             fluxdiff[j, i, 2] = fluxdiffi[i, 2]
-            fluxdiff[j, i, 4] = fluxdiffi[i, 3]
+            #fluxdiff[j, i, 3] = fluxdiffi[i, 3]
+            fluxdiff[j, i, 4] = fluxdiffi[i, 4]
         end
     end
     return fluxdiff
@@ -210,8 +216,9 @@ function ysweep(hyd::data2d)
 
         for i = 1:hyd.ny
             fluxdiff[i, j, 1] = fluxdiffi[i, 1]
+            #fluxdiff[i, j, 2] = fluxdiffi[i, 3]
             fluxdiff[i, j, 3] = fluxdiffi[i, 2]
-            fluxdiff[i, j, 4] = fluxdiffi[i, 3]
+            fluxdiff[i, j, 4] = fluxdiffi[i, 4]
         end
     end
     return fluxdiff
@@ -261,14 +268,15 @@ function uflux(hyd::data2d, dt)
 
     for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
         for k = 1:4
-            hyd.qp[j,i,k,1] -= 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])
-            hyd.qm[j,i,k,1] -= 0.5dt*(fy[j+1, i, k] - fy[j, i, k])
+            hyd.qp[j,i,k,1] += 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])
+            hyd.qm[j,i,k,1] += 0.5dt*(fy[j+1, i, k] - fy[j, i, k])
 
-            hyd.qp[j,i,k,2] -= 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])
-            hyd.qm[j,i,k,2] -= 0.5dt*(fx[j, i+1, k] - fx[j, i, k])
+            hyd.qp[j,i,k,2] += 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])
+            hyd.qm[j,i,k,2] += 0.5dt*(fx[j, i+1, k] - fx[j, i, k])
         end
     end
 
+    #normal fluxes
     fx = xsweep(hyd)
     fy = ysweep(hyd)
 

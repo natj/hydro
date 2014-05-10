@@ -1,33 +1,49 @@
 #Grid setup
 
 type data1d
+
+    #positions
     x::Array{Float64,1} #cell centers
     xi::Array{Float64,1} #cell LEFT interfaces
 
+    #density
     rho::Array{Float64,1}
     rhop::Array{Float64,1}
     rhom::Array{Float64,1}
 
+    #normal velocity (e.g. x-dir)
     vel::Array{Float64,1}
     velp::Array{Float64,1}
     velm::Array{Float64,1}
 
+    #transverse velocity (e.g. y-dir)
+    #NOTE: in reality we have also second transverse velocity in z-dir
+    #velt::Array{Float64,1}
+    veltp::Array{Float64,1}
+    veltm::Array{Float64,1}
+    
+    #internal energy
     eps::Array{Float64,1}
     epsp::Array{Float64,1}
     epsm::Array{Float64,1}
 
+    #pressure
     press::Array{Float64,1}
     pressp::Array{Float64,1}
     pressm::Array{Float64,1}
 
-    q::Array{Float64,2} #conserved quantities
+    #conserved quantities
+    q::Array{Float64,2}
     qp::Array{Float64,2}
     qm::Array{Float64,2}
 
-    n::Int64
+    #other
+    n::Int64 #grid points
     g::Int64 #ghost cells
 
     function data1d(nzones::Int64)
+
+        #initialize all arrays
 
         x = zeros(nzones)
         xi = zeros(nzones)
@@ -40,6 +56,10 @@ type data1d
         velp = zeros(nzones)
         velm = zeros(nzones)
 
+        velt = zeros(nzones)
+        veltp = zeros(nzones)
+        veltm = zeros(nzones)
+
         eps = zeros(nzones)
         epsp = zeros(nzones)
         epsm = zeros(nzones)
@@ -48,9 +68,9 @@ type data1d
         pressp = zeros(nzones)
         pressm = zeros(nzones)
 
-        q = zeros(nzones, 3)
-        qp = zeros(nzones, 3)
-        qm = zeros(nzones, 3)
+        q = zeros(nzones, 4)
+        qp = zeros(nzones, 4)
+        qm = zeros(nzones, 4)
         n = nzones
         g = 3
 
@@ -62,6 +82,8 @@ type data1d
             vel,
             velp,
             velm,
+            veltp,
+            veltm,
             eps,
             epsp,
             epsm,
@@ -78,15 +100,19 @@ end
 
 
 type data2d
+
+    #positions
     x::Array{Float64, 1} #cell centers for X
     y::Array{Float64, 1} #cell centers for Y
     xi::Array{Float64, 1} #cell LEFT interfaces
     yi::Array{Float64, 1} #cell LOWER interfaces
 
+    #density
     rho::Array{Float64, 2}
     rhop::Array{Float64, 3}
     rhom::Array{Float64, 3}
 
+    #velocities
     velx::Array{Float64, 2}
     velxp::Array{Float64, 3}
     velxm::Array{Float64, 3}
@@ -94,24 +120,29 @@ type data2d
     velyp::Array{Float64, 3}
     velym::Array{Float64, 3}
 
+    #internal energy
     eps::Array{Float64, 2}
     epsp::Array{Float64, 3}
     epsm::Array{Float64, 3}
 
+    #pressure
     press::Array{Float64, 2}
     pressp::Array{Float64, 3}
     pressm::Array{Float64, 3}
 
-    q::Array{Float64, 3} #conserved quantities
+    #conserved quantities
+    q::Array{Float64, 3}
     qp::Array{Float64, 4}
     qm::Array{Float64, 4}
 
-    nx::Int64
-    ny::Int64
+    #other
+    nx::Int64 #x-grid points
+    ny::Int64 #y-grid points
     g::Int64 #ghost cells
 
     function data2d(nx::Int64, ny::Int64)
 
+        #initialize all arrays
         x = zeros(nx)
         y = zeros(ny)
         xi = zeros(nx)
@@ -170,7 +201,6 @@ type data2d
 end
 
 
-
 #2-dim grid
 function grid_setup(self::data2d, xmin, xmax, ymin, ymax)
     dx = (xmax - xmin) / (self.nx -self.g*2 - 1)
@@ -181,7 +211,7 @@ function grid_setup(self::data2d, xmin, xmax, ymin, ymax)
     ymin = ymin - self.g*dy
     ymax = ymax + self.g*dy
 
-    #x setup
+    #x-dir
     for i = 1:self.nx
         self.x[i] = xmin + i*dx
     end
@@ -190,7 +220,7 @@ function grid_setup(self::data2d, xmin, xmax, ymin, ymax)
         self.xi[i] = self.x[i] - 0.5dx
     end
 
-    #y setup
+    #y-dir
     for i = 1:self.ny
         self.y[i] = ymin + i*dy
     end
@@ -538,17 +568,20 @@ function apply_bcs(hyd::data2d)
         hyd.press[j, :] = hyd.press[hyd.ny-hyd.g, :]
     end
 
-    #TODO: check corner boundaries
+    #TODO: check corner boundaries; are they correct?
+    #TODO: Do we need to force boundary condities to left and right states too?
 
     return hyd
 end
 
-#splice 2dim data into x-axis pencils
+#splice 2dim data into x-axis pencils;
+#y-axis data is rotated into x-axis pencils, too
+#
 #to save time we copy only the edge values
 function splice(hyd::data2d, j::Int64, dim::Int64)
 
     if dim == 1 #x-dim
-        #println("x j=$j $(hyd.ny)")
+
         @assert j < hyd.ny
         nn = hyd.nx
         xs = 1:nn
@@ -557,14 +590,24 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
         hyd1.x = hyd.x
         hyd1.xi = hyd.xi
 
+        #normal velocity
         hyd1.velp[:] = vec(hyd.velxp[ys, xs, dim])
         hyd1.velm[:] = vec(hyd.velxm[ys, xs, dim])
 
+        #transverse velocity
+        hyd1.veltp[:] = vec(hyd.velyp[ys, xs, dim])
+        hyd1.veltm[:] = vec(hyd.velym[ys, xs, dim])
+
+        #normal momentum
         hyd1.qm[:, 2] = vec(hyd.qm[ys, xs, 2, dim])
         hyd1.qp[:, 2] = vec(hyd.qp[ys, xs, 2, dim])
 
+        #transverse momentum
+        hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 3, dim])
+        hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 3, dim])
+
     elseif dim == 2 #y-dim
-        #println("y j=$j $(hyd.nx)")
+        
         @assert j < hyd.nx
         nn = hyd.ny
         xs = j
@@ -573,11 +616,22 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
         hyd1.x = hyd.y
         hyd1.xi = hyd.yi
 
+        #normal velocity
         hyd1.velp[:] = vec(hyd.velyp[ys, xs, dim])
         hyd1.velm[:] = vec(hyd.velym[ys, xs, dim])
 
+        #transverse velocity
+        hyd1.veltp[:] = vec(hyd.velxp[ys, xs, dim])
+        hyd1.veltm[:] = vec(hyd.velxm[ys, xs, dim])
+
+        #normal momentum
         hyd1.qm[:, 2] = vec(hyd.qm[ys, xs, 3, dim])
         hyd1.qp[:, 2] = vec(hyd.qp[ys, xs, 3, dim])
+
+        #transverse momentum
+        hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 2, dim])
+        hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 2, dim])
+
     else
         error("dim = $dim is not valid")
     end
@@ -585,19 +639,24 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
 
     #hyd1.g = hyd.g
     #hyd1.rho[:] = vec(hyd.rho[i, :])
+
+    #density
     hyd1.rhom[:] = vec(hyd.rhom[ys, xs, dim])
     hyd1.rhop[:] = vec(hyd.rhop[ys, xs, dim])
 
+    #internal energy
     hyd1.epsm[:] = vec(hyd.epsm[ys, xs, dim])
     hyd1.epsp[:] = vec(hyd.epsp[ys, xs, dim])
 
+    #pressure
     hyd1.pressm[:] = vec(hyd.pressm[ys, xs, dim])
     hyd1.pressp[:] = vec(hyd.pressp[ys, xs, dim])
 
+    #conserved variables
     hyd1.qm[:, 1] = vec(hyd.qm[ys, xs, 1, dim])
     hyd1.qp[:, 1] = vec(hyd.qp[ys, xs, 1, dim])
-    hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 4, dim])
-    hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 4, dim])
+    hyd1.qm[:, 4] = vec(hyd.qm[ys, xs, 4, dim])
+    hyd1.qp[:, 4] = vec(hyd.qp[ys, xs, 4, dim])
 
     return hyd1
 end
