@@ -170,7 +170,7 @@ function calc_rhs(hyd, dt, iter)
     fluxdiff = uflux(hyd, dt)
 
     #add artificial viscosity
-    #fluxdiff += artificial_viscosity(hyd, dt)
+    fluxdiff += artificial_viscosity(hyd, dt)
 
     #hyd = source_terms(hyd, 2.0dt)
 
@@ -254,24 +254,25 @@ end
 gamma = 1.4
 cfl = 0.5
 
-nx = 50
-ny = 50
-tend = 0.4
+nx = 200
+ny = 200
+tend = 5.0
 
 #initialize
 hyd = data2d(nx, ny)
-r32x, r32y = r32kernel(hyd.x, hyd.y)
+#r32x, r32y = r32kernel(hyd.x, hyd.y)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
+hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
 
 #set up initial data
 #hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
-hyd = setup_tubexy(hyd)
+#hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)
+hyd = setup_kh(hyd)
 
 visualize(hyd)
 

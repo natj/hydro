@@ -32,7 +32,7 @@ function visualize(hyd::data2d)
     hdata = hyd.rho[xs:ye, xs:xe]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 2.0)
+    clims = (0.8, 2.1)
     #clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
@@ -55,20 +55,20 @@ function visualize(hyd::data2d)
     #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
     #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
 
-    p11 =  plot(xy, rhoxy, "r")
-    #p11 = oplot(xy, velxy, "b")
+    #p11 =  plot(xy, rhoxy, "r--")
+    #p11 = oplot(xy, velxy, "b--")
 
-    p11 = oplot(xy, -velxxy, "b-")
-    p11 = oplot(xy, velyxy, "b--")
+    #p11 = oplot(xy, -velxxy, "b-")
+    #p11 = oplot(xy, velyxy, "b--")
 
-    p11 = oplot(xy, pressxy, "g")
+    #p11 = oplot(xy, pressxy, "g--")
     #p11 = oplot(hyd.y, epsxy, "k")
 
-    #mid = int(hyd.ny/2)
-    #p11 = plot(hyd.y, hyd.rho[:,mid], "r")
-    #p11 = oplot(hyd.y, hyd.vely[:,mid], "b")
-    #p11 = oplot(hyd.y, hyd.press[:,mid], "g")
-    #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
+    mid = int(hyd.ny/2)
+    p11 = plot(hyd.y, hyd.rho[:,mid], "r")
+    p11 = oplot(hyd.y, hyd.vely[:,mid], "b")
+    p11 = oplot(hyd.y, hyd.press[:,mid], "g")
+    p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
 
     #pressure
     hdata = hyd.press[xs:ye, xs:xe]

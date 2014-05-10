@@ -493,6 +493,41 @@ function setup_taylor2(self::data2d)
 end
 
 
+#Kelvin-Helmholtz -instability
+function setup_kh(self::data2d)
+    
+    A = 0.01
+    rho1 = 1.0
+    rho2 = 2.0
+    vel = 0.5
+
+    for j = 1:self.ny, i = 1:self.nx
+
+        if abs(self.y[j]) >= 0.25
+            self.rho[j, i] = rho1
+            self.velx[j,i] = vel
+        else
+            self.rho[j, i] = rho2
+            self.velx[j,i] = -vel
+        end
+
+    end
+
+    Lx = 0.5*abs(self.x[self.nx - self.g] - self.x[self.g+1])
+    Ly = 0.5*abs(self.y[self.ny - self.g] - self.y[self.g+1])
+
+    for j = (self.g+1):(self.ny - self.g), i = (self.g+1):(self.nx - self.g)
+        self.velx[j,i] = A*((1.0+cos(2pi*self.x[i]/Lx)*(1.0+cos(2pi*self.y[j]/Ly))))
+    end
+
+    self.press = ones(self.ny, self.nx)*2.5
+    self.vely[:,:] = zeros(self.ny, self.nx)
+    self.eps[:,:] = self.press[:,:] ./ self.rho[:,:] ./ (gamma - 1.0)
+
+    return self
+end
+
+
 
 function apply_bcs(hyd::data2d)
 
@@ -536,6 +571,60 @@ function apply_bcs(hyd::data2d)
         hyd.vely[j, :] = hyd.vely[hyd.ny-hyd.g, :]
         hyd.eps[j, :] = hyd.eps[hyd.ny-hyd.g, :]
         hyd.press[j, :] = hyd.press[hyd.ny-hyd.g, :]
+    end
+
+    #TODO: check corner boundaries
+
+    return hyd
+end
+
+
+function apply_periodic_bcs(hyd::data2d)
+
+    #arrays starting from zero
+    #       |g                  |n-g #
+    #[0 1 2 x x x  .....  x x x 7 8 9]
+
+    #arrays starting from 1
+    #     |g                  |n-g    #
+    #[1 2 3 x x x  .....  x x x 8 9 10]
+
+    #setup x boundaries
+    for j = 1:hyd.g
+        hyd.rho[:, j] = hyd.rho[:, hyd.nx-2hyd.g+j-1]
+        hyd.velx[:, j] = hyd.velx[:, hyd.nx-2hyd.g+j-1]
+        hyd.vely[:, j] = hyd.vely[:, hyd.nx-2hyd.g+j-1]
+        hyd.eps[:, j] = hyd.eps[:, hyd.nx-2hyd.g+j-1]
+        hyd.press[:, j] = hyd.press[:, hyd.nx-2hyd.g+j-1]
+    end
+
+    i=1
+    for j = (hyd.nx-hyd.g+1) : hyd.nx
+        hyd.rho[:, j] = hyd.rho[:, hyd.g+i]
+        hyd.velx[:, j] = hyd.velx[:, hyd.g+i]
+        hyd.vely[:, j] = hyd.vely[:, hyd.g+i]
+        hyd.eps[:, j] = hyd.eps[:, hyd.g+i]
+        hyd.press[:, j] = hyd.press[:, hyd.g+i]
+        i+=1
+    end
+
+    #y boundaries
+    for j = 1:hyd.g
+        hyd.rho[j, :] = hyd.rho[hyd.ny-2hyd.g+j-1, :]
+        hyd.velx[j, :] = hyd.velx[hyd.ny-2hyd.g+j-1, :]
+        hyd.vely[j, :] = hyd.vely[hyd.ny-2hyd.g+j-1, :]
+        hyd.eps[j, :] = hyd.eps[hyd.ny-2hyd.g+j-1, :]
+        hyd.press[j, :] = hyd.press[hyd.ny-2hyd.g+j-1, :]
+    end
+
+    i=1
+    for j = (hyd.ny-hyd.g+1) : hyd.ny
+        hyd.rho[j, :] = hyd.rho[hyd.g+i, :]
+        hyd.velx[j, :] = hyd.velx[hyd.g+i, :]
+        hyd.vely[j, :] = hyd.vely[hyd.g+i, :]
+        hyd.eps[j, :] = hyd.eps[hyd.g+i, :]
+        hyd.press[j, :] = hyd.press[hyd.g+i, :]
+        i += 1
     end
 
     #TODO: check corner boundaries
