@@ -182,21 +182,21 @@ function grid_setup(self::data2d, xmin, xmax, ymin, ymax)
     ymax = ymax + self.g*dy
 
     #x setup
-    for i = 1:self.nx
-        self.x[i] = xmin + i*dx
+    for i = 0:self.nx-1
+        self.x[i+1] = xmin + i*dx
     end
 
-    for i = 1:self.nx
-        self.xi[i] = self.x[i] - 0.5dx
+    for i = 0:self.nx-1
+        self.xi[i+1] = self.x[i+1] - 0.5dx
     end
 
     #y setup
-    for i = 1:self.ny
-        self.y[i] = ymin + i*dy
+    for i = 0:self.ny-1
+        self.y[i+1] = ymin + i*dy
     end
 
-    for i = 1:self.ny
-        self.yi[i] = self.y[i] - 0.5dy
+    for i = 0:self.ny-1
+        self.yi[i+1] = self.y[i+1] - 0.5dy
     end
 
 
@@ -502,7 +502,6 @@ function setup_kh(self::data2d)
     vel = 0.5
 
     for j = 1:self.ny, i = 1:self.nx
-
         if abs(self.y[j]) >= 0.25
             self.rho[j, i] = rho1
             self.velx[j,i] = vel
@@ -510,7 +509,6 @@ function setup_kh(self::data2d)
             self.rho[j, i] = rho2
             self.velx[j,i] = -vel
         end
-
     end
 
     Lx = 0.5*abs(self.x[self.nx - self.g] - self.x[self.g+1])
@@ -632,13 +630,81 @@ function apply_per_bcs(hyd::data2d)
     return hyd
 end
 
+function apply_kh_bcs(hyd::data2d)
+
+    #arrays starting from zero
+    #       |g                  |n-g #
+    #[0 1 2 x x x  .....  x x x 7 8 9]
+
+    #arrays starting from 1
+    #     |g                  |n-g    #
+    #[1 2 3 x x x  .....  x x x 8 9 10]
+
+    #setup x boundaries so that there is constant flow
+    rho1 = 1.0
+    rho2 = 2.0
+    vel = 0.5
+
+    for j = 1:hyd.ny, i = 1:hyd.g
+        if abs(hyd.y[j]) >= 0.25
+            hyd.rho[j, i] = rho1
+            hyd.velx[j,i] = vel
+            hyd.vely[j,i] = hyd.vely[j, hyd.g+1]
+            hyd.eps[j, i] = hyd.eps[j, hyd.g+1]
+        else
+            hyd.rho[j, i] = rho2
+            hyd.velx[j,i] = -vel
+            hyd.vely[j,i] = hyd.vely[j, hyd.g+1]
+            hyd.eps[j, i] = hyd.eps[j, hyd.g+1]
+        end
+    end
+
+    for j = 1:hyd.ny, i = (hyd.nx-hyd.g+1) : hyd.nx
+        if abs(hyd.y[j]) >= 0.25
+            hyd.rho[j, i] = rho1
+            hyd.velx[j,i] = vel
+            hyd.vely[j,i] = hyd.vely[j, hyd.g+1]
+            hyd.eps[j, i] = hyd.eps[j, hyd.g+1]
+        else
+            hyd.rho[j, i] = rho2
+            hyd.velx[j,i] = -vel
+            hyd.vely[j,i] = hyd.vely[j, hyd.g+1]
+            hyd.eps[j, i] = hyd.eps[j, hyd.g+1]
+        end
+    end
+
+    #y boundaries
+    for j = 1:hyd.g
+        hyd.rho[j, :] = hyd.rho[hyd.ny-2hyd.g+j-1, :]
+        hyd.velx[j, :] = hyd.velx[hyd.ny-2hyd.g+j-1, :]
+        hyd.vely[j, :] = hyd.vely[hyd.ny-2hyd.g+j-1, :]
+        hyd.eps[j, :] = hyd.eps[hyd.ny-2hyd.g+j-1, :]
+        hyd.press[j, :] = hyd.press[hyd.ny-2hyd.g+j-1, :]
+    end
+
+    i=1
+    for j = (hyd.ny-hyd.g+1) : hyd.ny
+        hyd.rho[j, :] = hyd.rho[hyd.g+i, :]
+        hyd.velx[j, :] = hyd.velx[hyd.g+i, :]
+        hyd.vely[j, :] = hyd.vely[hyd.g+i, :]
+        hyd.eps[j, :] = hyd.eps[hyd.g+i, :]
+        hyd.press[j, :] = hyd.press[hyd.g+i, :]
+        i += 1
+    end
+
+    #TODO: check corner boundaries
+
+    return hyd
+end
+
+
 #splice 2dim data into x-axis pencils
 #to save time we copy only the edge values
 function splice(hyd::data2d, j::Int64, dim::Int64)
 
     if dim == 1 #x-dim
         #println("x j=$j $(hyd.ny)")
-        @assert j < hyd.ny
+        @assert j <= hyd.ny
         nn = hyd.nx
         xs = 1:nn
         ys = j
@@ -654,7 +720,7 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
 
     elseif dim == 2 #y-dim
         #println("y j=$j $(hyd.nx)")
-        @assert j < hyd.nx
+        @assert j <= hyd.nx
         nn = hyd.ny
         xs = j
         ys = 1:nn
@@ -672,7 +738,7 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
     end
 
 
-    #hyd1.g = hyd.g
+    hyd1.g = hyd.g
     #hyd1.rho[:] = vec(hyd.rho[i, :])
     hyd1.rhom[:] = vec(hyd.rhom[ys, xs, dim])
     hyd1.rhop[:] = vec(hyd.rhop[ys, xs, dim])
@@ -685,6 +751,7 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
 
     hyd1.qm[:, 1] = vec(hyd.qm[ys, xs, 1, dim])
     hyd1.qp[:, 1] = vec(hyd.qp[ys, xs, 1, dim])
+
     hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 4, dim])
     hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 4, dim])
 

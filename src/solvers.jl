@@ -113,7 +113,8 @@ function hllc(hyd::data1d)
     ds = smax .- smin
     flux = zeros(hyd.n, 3)
 
-    for i = hyd.g:(hyd.n-hyd.g+1)
+    for i = (hyd.g-1):(hyd.n-hyd.g+1)
+    #for i = 1:hyd.n
         if smin[i] >= 0.0
             flux[i,1] = fluxl[i,1]
             flux[i,2] = fluxl[i,2]
@@ -187,11 +188,11 @@ end
 #x-sweep
 function xsweep(hyd::data2d)
     flux = zeros(hyd.ny, hyd.nx, 4)
-    for j = (hyd.g+1):(hyd.ny-hyd.g+1)
+    for j = (hyd.g-1):(hyd.ny-hyd.g+1)
         hyd1 = splice(hyd, j, 1)
         fluxi = hllc(hyd1)
 
-        for i = 1:hyd.nx
+        for i = (hyd.g):(hyd.nx-hyd.g+1)
             flux[j, i, 1] = fluxi[i, 1]
             flux[j, i, 2] = fluxi[i, 2]
             flux[j, i, 4] = fluxi[i, 3]
@@ -204,11 +205,11 @@ end
 #y-sweep
 function ysweep(hyd::data2d)
     flux = zeros(hyd.ny, hyd.nx, 4)
-    for j = (hyd.g+1):(hyd.nx-hyd.g+1)
+    for j = (hyd.g-1):(hyd.nx-hyd.g+1)
         hyd1 = splice(hyd, j, 2)
         fluxi = hllc(hyd1)
 
-        for i = 1:hyd.ny
+        for i = (hyd.g):(hyd.ny-hyd.g+1)
             flux[i, j, 1] = fluxi[i, 1]
             flux[i, j, 3] = fluxi[i, 2]
             flux[i, j, 4] = fluxi[i, 3]
@@ -261,13 +262,13 @@ function uflux(hyd::data2d, dt)
     # U_yr[i,j,:] = U_yr[i,j,:] - 0.5*dt/dx * (F_x[i+1,j,:] - F_x[i,j,:])
 
     #TODO: relax dx & dy calculations
-    for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
+    for j = (hyd.g-1):(hyd.ny-hyd.g+1), i = (hyd.g-1):(hyd.nx-hyd.g+1)
         for k = 1:4
-            hyd.qp[j,i,k,1] += 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])/(hyd.yi[j+1]-hyd.yi[j])
-            hyd.qm[j,i,k,1] += 0.5dt*(fy[j+1, i, k] - fy[j, i, k])/(hyd.yi[j+1]-hyd.yi[j])
+            hyd.qp[j,i,k,1] -= 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])/(hyd.yi[j+1]-hyd.yi[j])
+            hyd.qm[j,i,k,1] -= 0.5dt*(fy[j+1, i, k] - fy[j, i, k])/(hyd.yi[j+1]-hyd.yi[j])
 
-            hyd.qp[j,i,k,2] += 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])/(hyd.xi[i+1]-hyd.xi[i])
-            hyd.qm[j,i,k,2] += 0.5dt*(fx[j, i+1, k] - fx[j, i, k])/(hyd.xi[i+1]-hyd.xi[i])
+            hyd.qp[j,i,k,2] -= 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])/(hyd.xi[i+1]-hyd.xi[i])
+            hyd.qm[j,i,k,2] -= 0.5dt*(fx[j, i+1, k] - fx[j, i, k])/(hyd.xi[i+1]-hyd.xi[i])
         end
     end
 
