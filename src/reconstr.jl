@@ -10,6 +10,25 @@ function minmod(a,b)
     end
 end
 
+function tvd_minmod_reconstruction(n, g, f, x, xi)
+    fp = zeros(n)
+    fm = zeros(n)
+
+    for i = g:(n-g+2)
+        dx_up = x[i] - x[i-1]
+        dx_down = x[i+1] - x[i]
+        dx_m = x[i] - xi[i]
+        dx_p = xi[i+1] - x[i]
+        df_up = (f[i] - f[i-1])/dx_up
+        df_down = (f[i+1]-f[i])/dx_down
+        delta = minmod(df_up, df_down)
+        fp[i] = f[i] + delta*dx_p
+        fm[i] = f[i] - delta*dx_m
+    end
+
+    return fp, fm
+end
+
 signum(x,y) = y >= 0.0 ? abs(x) : -abs(x)
 
 function tvd_mc_reconstruction(n, g, f, x, xi)
@@ -27,7 +46,10 @@ function tvd_mc_reconstruction(n, g, f, x, xi)
         if df_up*df_down < 0.0
             delta = 0.0
         else
-            delta = signum(min(2.0abs(df_up), 2.0abs(df_down), 0.5(abs(df_up)+abs(df_down))), df_up + df_down)
+            delta = signum(min(2.0abs(df_up), 
+                               2.0abs(df_down), 
+                               0.5(abs(df_up)+abs(df_down))), 
+                           df_up + df_down)
         end
 
         fp[i] = f[i] + delta*dx_p
@@ -42,7 +64,7 @@ function reconstruct(hyd::data2d)
 
   #x-pencils
   for j = hyd.g:(hyd.ny-hyd.g+2)
-    rhop, rhom = tvd_mc_reconstruction(hyd.nx,
+    rhop, rhom = tvd_minmod_reconstruction(hyd.nx,
                                        hyd.g,
                                        vec(hyd.rho[j,:]),
                                        hyd.x,
@@ -51,7 +73,7 @@ function reconstruct(hyd::data2d)
     hyd.rhop[j,:,1] = rhop'
     hyd.rhom[j,:,1] = rhom'
 
-    epsp, epsm = tvd_mc_reconstruction(hyd.nx,
+    epsp, epsm = tvd_minmod_reconstruction(hyd.nx,
                                        hyd.g,
                                        vec(hyd.eps[j,:]),
                                        hyd.x,
@@ -60,7 +82,7 @@ function reconstruct(hyd::data2d)
     hyd.epsp[j,:,1] = epsp'
     hyd.epsm[j,:,1] = epsm'
 
-    velxp, velxm = tvd_mc_reconstruction(hyd.nx,
+    velxp, velxm = tvd_minmod_reconstruction(hyd.nx,
                                          hyd.g,
                                          vec(hyd.velx[j,:]),
                                          hyd.x,
@@ -69,7 +91,7 @@ function reconstruct(hyd::data2d)
     hyd.velxp[j,:,1] = velxp'
     hyd.velxm[j,:,1] = velxm'
 
-    velyp, velym = tvd_mc_reconstruction(hyd.nx,
+    velyp, velym = tvd_minmod_reconstruction(hyd.nx,
                                          hyd.g,
                                          vec(hyd.vely[j,:]),
                                          hyd.x,
@@ -81,25 +103,25 @@ function reconstruct(hyd::data2d)
 
   #y-pencils
   for i = hyd.g:(hyd.nx-hyd.g+2)
-    hyd.rhop[:,i,2], hyd.rhom[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+    hyd.rhop[:,i,2], hyd.rhom[:,i,2] = tvd_minmod_reconstruction(hyd.ny,
                                                              hyd.g,
                                                              hyd.rho[:,i],
                                                              hyd.y,
                                                              hyd.yi)
 
-    hyd.epsp[:,i,2], hyd.epsm[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+    hyd.epsp[:,i,2], hyd.epsm[:,i,2] = tvd_minmod_reconstruction(hyd.ny,
                                                              hyd.g,
                                                              hyd.eps[:,i,1],
                                                              hyd.y,
                                                              hyd.yi)
 
-    hyd.velxp[:,i,2], hyd.velxm[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+    hyd.velxp[:,i,2], hyd.velxm[:,i,2] = tvd_minmod_reconstruction(hyd.ny,
                                                                hyd.g,
                                                                hyd.velx[:,i],
                                                                hyd.y,
                                                                hyd.yi)
 
-    hyd.velyp[:,i,2], hyd.velym[:,i,2] = tvd_mc_reconstruction(hyd.ny,
+    hyd.velyp[:,i,2], hyd.velym[:,i,2] = tvd_minmod_reconstruction(hyd.ny,
                                                                hyd.g,
                                                                hyd.vely[:,i],
                                                                hyd.y,

@@ -346,20 +346,22 @@ while(t < tend):
     # calc rhs
     k1 = calc_rhs(hyd)
     # calculate intermediate step
-    hyd.q = qold + 1.0/2.0 * dt * k1
+    #hyd.q = qold + 1.0/2.0 * dt * k1
+    hyd.q = qold + dt * k1
+
     # con2prim
     (hyd.rho,hyd.eps,hyd.press,hyd.vel) = con2prim(hyd.q)
     # boundaries
     hyd = apply_bcs(hyd)
 
     #calc rhs
-    k2 = calc_rhs(hyd)
+    #k2 = calc_rhs(hyd)
     #apply update
-    hyd.q = qold + dt * (0.5 * k1 + 0.5 * k2)
+    #hyd.q = qold + dt * (0.5 * k1 + 0.5 * k2)
     # con2prim
-    (hyd.rho,hyd.eps,hyd.press,hyd.vel) = con2prim(hyd.q)
+    #(hyd.rho,hyd.eps,hyd.press,hyd.vel) = con2prim(hyd.q)
     # apply bcs
-    hyd = apply_bcs(hyd)
+    #hyd = apply_bcs(hyd)
 
     # update time
     t = t + dt
