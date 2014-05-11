@@ -63,7 +63,7 @@ end
 function reconstruct(hyd::data2d)
 
   #x-pencils
-  for j = hyd.g:(hyd.ny-hyd.g+2)
+  for j = (hyd.g-1):(hyd.ny-hyd.g+2)
     rhop, rhom = tvd_minmod_reconstruction(hyd.nx,
                                        hyd.g,
                                        vec(hyd.rho[j,:]),
@@ -102,7 +102,7 @@ function reconstruct(hyd::data2d)
   end
 
   #y-pencils
-  for i = hyd.g:(hyd.nx-hyd.g+2)
+  for i = (hyd.g-1):(hyd.nx-hyd.g+2)
     hyd.rhop[:,i,2], hyd.rhom[:,i,2] = tvd_minmod_reconstruction(hyd.ny,
                                                              hyd.g,
                                                              hyd.rho[:,i],

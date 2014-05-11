@@ -24,15 +24,18 @@ function visualize(hyd::data2d)
     #cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
 
 
-    xs = hyd.g
-    xe = hyd.nx-hyd.g-1
-    ye = hyd.ny-hyd.g-1
+    #xs = hyd.g
+    #xe = hyd.nx-hyd.g-1
+    #ye = hyd.ny-hyd.g-1
 
+    xs = 1
+    xe = hyd.nx
+    ye = hyd.ny
 
     hdata = hyd.rho[xs:ye, xs:xe]
     p1=FramedPlot()
     #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, 2.1)
+    clims = (0.8, 2.1)
     #clims = (0.0, maximum(hdata))
     img = Winston.data2rgb(hdata, clims, cm)
     add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
@@ -55,17 +58,17 @@ function visualize(hyd::data2d)
     #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
     #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
 
-    p11 =  plot(xy, rhoxy, "r;")
+    p11 =  plot(xy, rhoxy, "r")
     #p11 = oplot(xy, velxy, "b-")
 
-    p11 = oplot(xy, abs(velxxy), "b;")
-    p11 = oplot(xy, abs(velyxy), "c;")
+    p11 = oplot(xy, abs(velxxy), "b")
+    p11 = oplot(xy, abs(velyxy), "c")
 
-    p11 = oplot(xy, pressxy, "g;")
+    p11 = oplot(xy, pressxy, "g")
     #p11 = oplot(hyd.y, epsxy, "k")
 
-    #mid = int(hyd.ny/2)
-    #p11 = oplot(hyd.y, hyd.rho[:,mid], "r")
+    mid = int(hyd.nx/2)
+    #p11 = plot(hyd.y, hyd.rho[:,mid], "r")
     #p11 = oplot(hyd.y, abs(hyd.vely[:,mid]), "b")
     #p11 = oplot(hyd.y, hyd.press[:,mid], "g")
     #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
@@ -83,10 +86,12 @@ function visualize(hyd::data2d)
     setattr(p2, title="press")
 
     #vel
-    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
+    #hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
+    hdata = hyd.velx[xs:ye, xs:xe]
+
     p3=FramedPlot()
-    #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.0, maximum(hdata))
+    clims = (minimum(hdata), maximum(hdata))
+    #clims = (0.0, maximum(hdata))
     #clims = (0.0, 1.0)
     img = Winston.data2rgb(hdata, clims, cm)
     add(p3, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))

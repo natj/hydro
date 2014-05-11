@@ -114,10 +114,10 @@ function avisc_CW(u, v, g, nx, ny, dx, dy)
     avisco_x = zeros(ny, nx)
     avisco_y = zeros(ny, nx)
 
-    for j = g:(ny-g+2), i = g:(nx-g+2)
+    for j = (g-1):(ny-g+1), i = (g-1):(nx-g+1)
 
         #x-interface
-        divU_x = (u[j, i] - u[j, i-1])/dx + 0.25(v[j+1, i] + v[j+1, i-1] - v[j-1, i] - v[j-1, i-1])/dy
+        divU_x = (u[j, i] - u[j, i-1])/dx + 0.25(v[j+1, i] + v[j+1, i-1] - v[j-1, i] - v[j-1, i-1])/dx
         avisco_x[j, i] = cvisc*max(-divU_x*dx, 0.0)
 
         #y-interface value
@@ -137,8 +137,8 @@ function artificial_viscosity(hyd::data2d, dt)
     fx = zeros(hyd.ny, hyd.nx, 4)
     fy = zeros(hyd.ny, hyd.nx, 4)
 
-    for k = 1:4
-        for j = hyd.g:(hyd.ny-hyd.g+2), i = hyd.g:(hyd.nx-hyd.g+2)
+    for j = (hyd.g):(hyd.ny-hyd.g+1), i = (hyd.g):(hyd.nx-hyd.g+1)
+        for k = 1:4
             fx[j, i, k] = aviscx[j, i]*(hyd.q[j, i-1, k] - hyd.q[j, i, k])
             fy[j, i, k] = aviscy[j, i]*(hyd.q[j-1, i, k] - hyd.q[j, i, k])
         end
@@ -148,22 +148,22 @@ function artificial_viscosity(hyd::data2d, dt)
 end
 
 
-function calc_rhs(hyd, dt, iter)
+function calc_rhs(hyd, dt)
 
     #reconstruction and prim2con
     hyd = reconstruct(hyd)
 
     #apply source terms for the interfaces
-    hyd = source_terms(hyd, dt)
+    #hyd = source_terms(hyd, dt)
 
     #compute flux difference
     #fluxdiff = sflux(hyd, dt, iter)
     fx, fy = uflux(hyd, dt)
 
     #add artificial viscosity
-    vfx, vfy = artificial_viscosity(hyd, dt)
-    fx += vfx
-    fy += vfy
+    #vfx, vfy = artificial_viscosity(hyd, dt)
+    #fx += vfx
+    #fy += vfy
 
     #hyd = source_terms(hyd, 2.0dt)
 
@@ -171,12 +171,11 @@ function calc_rhs(hyd, dt, iter)
     dy = abs(hyd.y[2]-hyd.y[1])
 
     fluxdiff = zeros(hyd.ny, hyd.nx, 4)
-    for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
+    for j = (hyd.g-1):(hyd.ny-hyd.g+1), i = (hyd.g-1):(hyd.nx-hyd.g+1)
         for k = 1:4
             fluxdiff[j, i, k] = (fx[j, i, k] - fx[j, i-1, k])/dx + (fy[j, i, k] - fy[j-1, i, k])/dy
         end
     end
-
 
     #return RHS = -fluxdiff
     return -fluxdiff
@@ -219,28 +218,28 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         qold = copy(hyd.q)
 
         #calc rhs
-        k1 = calc_rhs(hyd, 0.5dt, i)
+        k1 = calc_rhs(hyd, 0.5dt)
         #calculate intermediate step
         hyd.q = qold + 0.5dt*k1
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
 
-        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
-        hyd.velx[:,:] -= 0.5dt*gxflx
-        hyd.vely[:,:] -= 0.5dt*gyflx
-        hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
+        #hyd.velx[:,:] -= 0.5dt*gxflx
+        #hyd.vely[:,:] -= 0.5dt*gyflx
+        #hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
 
         #boundaries
-        hyd = apply_bcs(hyd)
+        hyd = apply_per_bcs(hyd)
 
         #calc rhs
-        k2 = calc_rhs(hyd, dt, i)
+        k2 = calc_rhs(hyd, dt)
         #apply update
         hyd.q = qold + dt*(0.5k1 + 0.5k2)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
         #apply bcs
-        hyd = apply_bcs(hyd)
+        hyd = apply_per_bcs(hyd)
 
         #update time
         t += dt
@@ -257,9 +256,9 @@ end
 gamma = 1.4
 cfl = 0.6
 
-nx = 100
-ny = 300
-tend = 10.0
+nx = 50
+ny = 50
+tend = 5.0
 
 #initialize
 hyd = data2d(nx, ny)
@@ -267,17 +266,17 @@ hyd = data2d(nx, ny)
 
 #set up grid
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
-#hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
-hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
+hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
+#hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
 
 #set up initial data
-hyd = setup_taylor2(hyd)
+#hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)
-#hyd = setup_kh(hyd)
+hyd = setup_kh(hyd)
 
 visualize(hyd)
 
