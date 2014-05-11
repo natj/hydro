@@ -55,8 +55,6 @@ function calc_dt(hyd, dtp)
     dtnew = 1.0
     for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
         dtnew = min(dtnew, (hyd.x[i+1] - hyd.x[i]) / max(abs(hyd.velx[j, i]+cs[j, i]), abs(hyd.velx[j, i]-cs[j, i])))
-    end
-    for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
         dtnew = min(dtnew, (hyd.y[j+1] - hyd.y[j]) / max(abs(hyd.vely[j, i]+cs[j, i]), abs(hyd.vely[j, i]-cs[j, i])))
     end
 
@@ -146,14 +144,7 @@ function artificial_viscosity(hyd::data2d, dt)
         end
     end
 
-    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
-    for k = 1:4
-        for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
-            fluxdiff[j, i, k] = (fx[j, i, k] - fx[j, i-1, k])/dx + (fy[j, i, k] - fy[j-1, i, k])/dy
-        end
-    end
-
-    return fluxdiff
+    return fx, fy
 end
 
 
@@ -167,12 +158,25 @@ function calc_rhs(hyd, dt, iter)
 
     #compute flux difference
     #fluxdiff = sflux(hyd, dt, iter)
-    fluxdiff = uflux(hyd, dt)
+    fx, fy = uflux(hyd, dt)
 
     #add artificial viscosity
-    #fluxdiff += artificial_viscosity(hyd, dt)
+    vfx, vfy = artificial_viscosity(hyd, dt)
+    fx += vfx
+    fy += vfy
 
     #hyd = source_terms(hyd, 2.0dt)
+
+    dx = abs(hyd.x[2]-hyd.x[1])
+    dy = abs(hyd.y[2]-hyd.y[1])
+
+    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
+    for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
+        for k = 1:4
+            fluxdiff[j, i, k] = (fx[j, i, k] - fx[j, i-1, k])/dx + (fy[j, i, k] - fy[j-1, i, k])/dy
+        end
+    end
+
 
     #return RHS = -fluxdiff
     return -fluxdiff
@@ -255,7 +259,7 @@ cfl = 0.5
 
 nx = 100
 ny = 100
-tend = 0.5
+tend = 5.0
 
 #initialize
 hyd = data2d(nx, ny)
@@ -263,11 +267,12 @@ hyd = data2d(nx, ny)
 
 #set up grid
 hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
+#hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
 
 #set up initial data
 #hyd = setup_taylor2(hyd)
-#hyd = setup_blast(hyd)
-hyd = setup_tubexy(hyd)
+hyd = setup_blast(hyd)
+#hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)

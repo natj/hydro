@@ -579,7 +579,7 @@ function apply_bcs(hyd::data2d)
 end
 
 
-function apply_periodic_bcs(hyd::data2d)
+function apply_per_bcs(hyd::data2d)
 
     #arrays starting from zero
     #       |g                  |n-g #

@@ -70,8 +70,7 @@ end
 
 #HLLC solver
 function hllc(hyd::data1d)
-    fluxdiff = zeros(hyd.n, 3)
-
+    
     #compute eigenvalues
     smin = zeros(hyd.n)
     smax = zeros(hyd.n)
@@ -170,51 +169,53 @@ function hllc(hyd::data1d)
         end
     end
 
-
     #flux difference
-    for j = 1:3
-        for i = (hyd.g+1):(hyd.n-hyd.g+1)
-            rm = hyd.xi[i]
-            rp = hyd.xi[i+1]
-            dxi = 1.0/(rp - rm)
-            fluxdiff[i, j] = dxi * (flux[i, j]  - flux[i-1, j])
-        end
-    end
+    #fluxdiff = zeros(hyd.n, 3)
+    #for j = 1:3
+    #    for i = (hyd.g+1):(hyd.n-hyd.g+1)
+    #        rm = hyd.xi[i]
+    #        rp = hyd.xi[i+1]
+    #        dxi = 1.0/(rp - rm)
+    #        fluxdiff[i, j] = dxi * (flux[i, j]  - flux[i-1, j])
+    #    end
+    #end
 
-    return fluxdiff
+    return flux
 end
 
 
 #x-sweep
 function xsweep(hyd::data2d)
-    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
+    flux = zeros(hyd.ny, hyd.nx, 4)
     for j = (hyd.g+1):(hyd.ny-hyd.g+1)
         hyd1 = splice(hyd, j, 1)
-        fluxdiffi = hllc(hyd1)
+        fluxi = hllc(hyd1)
 
         for i = 1:hyd.nx
-            fluxdiff[j, i, 1] = fluxdiffi[i, 1]
-            fluxdiff[j, i, 2] = fluxdiffi[i, 2]
-            fluxdiff[j, i, 4] = fluxdiffi[i, 3]
+            flux[j, i, 1] = fluxi[i, 1]
+            flux[j, i, 2] = fluxi[i, 2]
+            flux[j, i, 4] = fluxi[i, 3]
         end
     end
-    return fluxdiff
+
+    return flux
 end
 
 #y-sweep
 function ysweep(hyd::data2d)
-    fluxdiff = zeros(hyd.ny, hyd.nx, 4)
+    flux = zeros(hyd.ny, hyd.nx, 4)
     for j = (hyd.g+1):(hyd.nx-hyd.g+1)
         hyd1 = splice(hyd, j, 2)
-        fluxdiffi = hllc(hyd1)
+        fluxi = hllc(hyd1)
 
         for i = 1:hyd.ny
-            fluxdiff[i, j, 1] = fluxdiffi[i, 1]
-            fluxdiff[i, j, 3] = fluxdiffi[i, 2]
-            fluxdiff[i, j, 4] = fluxdiffi[i, 3]
+            flux[i, j, 1] = fluxi[i, 1]
+            flux[i, j, 3] = fluxi[i, 2]
+            flux[i, j, 4] = fluxi[i, 3]
         end
     end
-    return fluxdiff
+
+    return flux
 end
 
 
@@ -235,7 +236,7 @@ function sflux(hyd::data2d, dt, iter)
 
     hyd2 = hyd
 
-    qold = hyd2.q
+    qold = copy(hyd2.q)
     fluxdiff = mod(iter, 2) == 0 ? xsweep(hyd2) : ysweep(hyd2)
     hyd2.q = qold - dt*fluxdiff
     hyd2.rho, hyd2.eps, hyd2.press, hyd2.velx, hyd2.vely = con2prim(hyd2.q)
@@ -259,21 +260,29 @@ function uflux(hyd::data2d, dt)
     # U_yl[i,j,:] = U_yl[i,j,:] - 0.5*dt/dx * (F_x[i+1,j-1,:] - F_x[i,j-1,:])
     # U_yr[i,j,:] = U_yr[i,j,:] - 0.5*dt/dx * (F_x[i+1,j,:] - F_x[i,j,:])
 
+    #TODO: relax dx & dy calculations
     for j = (hyd.g+1):(hyd.ny-hyd.g+1), i = (hyd.g+1):(hyd.nx-hyd.g+1)
         for k = 1:4
-            hyd.qp[j,i,k,1] -= 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])
-            hyd.qm[j,i,k,1] -= 0.5dt*(fy[j+1, i, k] - fy[j, i, k])
+            hyd.qp[j,i,k,1] += 0.5dt*(fy[j+1, i-1, k] - fy[j, i-1, k])/(hyd.yi[j+1]-hyd.yi[j])
+            hyd.qm[j,i,k,1] += 0.5dt*(fy[j+1, i, k] - fy[j, i, k])/(hyd.yi[j+1]-hyd.yi[j])
 
-            hyd.qp[j,i,k,2] -= 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])
-            hyd.qm[j,i,k,2] -= 0.5dt*(fx[j, i+1, k] - fx[j, i, k])
+            hyd.qp[j,i,k,2] += 0.5dt*(fx[j-1, i+1, k] - fx[j-1, i, k])/(hyd.xi[i+1]-hyd.xi[i])
+            hyd.qm[j,i,k,2] += 0.5dt*(fx[j, i+1, k] - fx[j, i, k])/(hyd.xi[i+1]-hyd.xi[i])
         end
     end
 
+    #update conserved variables
+    hyd.rhom[:,:,1], hyd.epsm[:,:,1], hyd.pressm[:,:,1], hyd.velxm[:,:,1], hyd.velym[:,:,1] = con2prim(hyd.qm[:,:,:,1])
+    hyd.rhop[:,:,1], hyd.epsp[:,:,1], hyd.pressp[:,:,1], hyd.velxp[:,:,1], hyd.velyp[:,:,1] = con2prim(hyd.qp[:,:,:,1])
+
+    hyd.rhom[:,:,2], hyd.epsm[:,:,2], hyd.pressm[:,:,2], hyd.velxm[:,:,2], hyd.velym[:,:,2] = con2prim(hyd.qm[:,:,:,2])
+    hyd.rhop[:,:,2], hyd.epsp[:,:,2], hyd.pressp[:,:,2], hyd.velxp[:,:,2], hyd.velyp[:,:,2] = con2prim(hyd.qp[:,:,:,2])
+  
+    #fluxes normal to the surface
     fx = xsweep(hyd)
     fy = ysweep(hyd)
 
-    return fx .+ fy
-
+    return fx, fy
 end
 
 
