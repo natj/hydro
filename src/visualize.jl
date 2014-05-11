@@ -64,10 +64,10 @@ function visualize(hyd::data2d)
     p11 = oplot(xy, pressxy, "g;")
     #p11 = oplot(hyd.y, epsxy, "k")
 
-    mid = int(hyd.ny/2)
-    p11 = oplot(hyd.y, hyd.rho[:,mid], "r")
-    p11 = oplot(hyd.y, abs(hyd.vely[:,mid]), "b")
-    p11 = oplot(hyd.y, hyd.press[:,mid], "g")
+    #mid = int(hyd.ny/2)
+    #p11 = oplot(hyd.y, hyd.rho[:,mid], "r")
+    #p11 = oplot(hyd.y, abs(hyd.vely[:,mid]), "b")
+    #p11 = oplot(hyd.y, hyd.press[:,mid], "g")
     #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
 
     #pressure

@@ -154,7 +154,7 @@ function calc_rhs(hyd, dt, iter)
     hyd = reconstruct(hyd)
 
     #apply source terms for the interfaces
-    #hyd = source_terms(hyd, dt)
+    hyd = source_terms(hyd, dt)
 
     #compute flux difference
     #fluxdiff = sflux(hyd, dt, iter)
@@ -215,7 +215,7 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         dt = calc_dt(hyd, dt)
 
         #save old state
-        #hydold = hyd
+        old_rho = copy(hyd.rho[:,:])
         qold = copy(hyd.q)
 
         #calc rhs
@@ -225,10 +225,10 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
 
-        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+hydold.rho[:,:]), hyd.nx, hyd.ny)
-        #hyd.velx[:,:] -= 0.5dt*gxflx
-        #hyd.vely[:,:] -= 0.5dt*gyflx
-        #hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
+        hyd.velx[:,:] -= 0.5dt*gxflx
+        hyd.vely[:,:] -= 0.5dt*gyflx
+        hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
 
         #boundaries
         hyd = apply_bcs(hyd)
@@ -255,23 +255,24 @@ end
 
 #basic parameters
 gamma = 1.4
-cfl = 0.5
+cfl = 0.6
 
 nx = 100
-ny = 100
-tend = 5.0
+ny = 300
+tend = 10.0
 
 #initialize
 hyd = data2d(nx, ny)
 #r32x, r32y = r32kernel(hyd.x, hyd.y)
 
 #set up grid
-hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
+#hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 #hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
+hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
 
 #set up initial data
-#hyd = setup_taylor2(hyd)
-hyd = setup_blast(hyd)
+hyd = setup_taylor2(hyd)
+#hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
