@@ -270,7 +270,7 @@ function setup_tubexy(self::data2d)
     rho1 = 1.0
     rho2 = 0.125
     press1 = 1.0
-    press2 = 0.1
+    press2 = 0.14
 
     self.rho[:,:] = rho1
     self.press[:,:] = press1
@@ -461,7 +461,7 @@ end
 
 #Taylor instability initial data according to Athena code
 function setup_taylor2(self::data2d)
-    rchange = int(0.5self.ny)
+    rchange = int(0.25self.ny)
 
     A = 0.01
     grav = 0.005
@@ -511,11 +511,12 @@ function setup_kh(self::data2d)
         end
     end
 
-    Lx = 0.5*abs(self.x[self.nx - self.g] - self.x[self.g+1])
-    Ly = 0.5*abs(self.y[self.ny - self.g] - self.y[self.g+1])
+    Lx = 0.25*abs(self.x[self.nx - self.g] - self.x[self.g+1])
+    Ly = 0.25*abs(self.y[self.ny - self.g] - self.y[self.g+1])
 
     for j = (self.g+1):(self.ny - self.g), i = (self.g+1):(self.nx - self.g)
-        self.velx[j,i] = A*((1.0+cos(2pi*self.x[i]/Lx)*(1.0+cos(2pi*self.y[j]/Ly))))
+        self.velx[j,i] += A*((1.0+cos(2pi*self.x[i]/Lx)*(1.0+cos(2pi*self.y[j]/Ly))))
+        #self.vely[j,i] += A*((1.0+sin(2pi*self.x[i]/Lx)*(1.0+sin(2pi*self.y[j]/Ly))))
     end
 
     self.press = ones(self.ny, self.nx)*2.5
@@ -567,6 +568,56 @@ function apply_bcs(hyd::data2d)
         hyd.rho[j, :] = hyd.rho[hyd.ny-hyd.g, :]
         hyd.velx[j, :] = hyd.velx[hyd.ny-hyd.g, :]
         hyd.vely[j, :] = hyd.vely[hyd.ny-hyd.g, :]
+        hyd.eps[j, :] = hyd.eps[hyd.ny-hyd.g, :]
+        hyd.press[j, :] = hyd.press[hyd.ny-hyd.g, :]
+    end
+
+    #TODO: check corner boundaries
+
+    return hyd
+end
+
+
+function apply_refl_bcs(hyd::data2d)
+
+    #arrays starting from zero
+    #       |g                  |n-g #
+    #[0 1 2 x x x  .....  x x x 7 8 9]
+
+    #arrays starting from 1
+    #     |g                  |n-g    #
+    #[1 2 3 x x x  .....  x x x 8 9 10]
+
+    #setup x boundaries
+    for j = 1:hyd.g
+        hyd.rho[:, j] = hyd.rho[:, hyd.g+1]
+        hyd.velx[:, j] = -hyd.velx[:, hyd.g+1]
+        hyd.vely[:, j] = -hyd.vely[:, hyd.g+1]
+        hyd.eps[:, j] = hyd.eps[:, hyd.g+1]
+        hyd.press[:, j] = hyd.press[:, hyd.g+1]
+    end
+
+    for j = (hyd.nx-hyd.g+1) : hyd.nx
+        hyd.rho[:, j] = hyd.rho[:, hyd.nx-hyd.g]
+        hyd.velx[:, j] = -hyd.velx[:, hyd.nx-hyd.g]
+        hyd.vely[:, j] = -hyd.vely[:, hyd.nx-hyd.g]
+        hyd.eps[:, j] = hyd.eps[:, hyd.nx-hyd.g]
+        hyd.press[:, j] = hyd.press[:, hyd.nx-hyd.g]
+    end
+
+    #y boundaries
+    for j = 1:hyd.g
+        hyd.rho[j, :] = hyd.rho[hyd.g+1, :]
+        hyd.velx[j, :] = -hyd.velx[hyd.g+1, :]
+        hyd.vely[j, :] = -hyd.vely[hyd.g+1, :]
+        hyd.eps[j, :] = hyd.eps[hyd.g+1, :]
+        hyd.press[j, :] = hyd.press[hyd.g+1, :]
+    end
+
+    for j = (hyd.ny-hyd.g+1) : hyd.ny
+        hyd.rho[j, :] = hyd.rho[hyd.ny-hyd.g, :]
+        hyd.velx[j, :] = -hyd.velx[hyd.ny-hyd.g, :]
+        hyd.vely[j, :] = -hyd.vely[hyd.ny-hyd.g, :]
         hyd.eps[j, :] = hyd.eps[hyd.ny-hyd.g, :]
         hyd.press[j, :] = hyd.press[hyd.ny-hyd.g, :]
     end

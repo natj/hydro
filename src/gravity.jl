@@ -4,7 +4,7 @@ function ygravity(rho::AbstractMatrix,
                   nx::Int64,
                   ny::Int64;
                   gx=0.0,
-                  gy=-0.5)
+                  gy=-1.0)
 
     gxflux = gx .* rho
     gyflux = gy .* rho

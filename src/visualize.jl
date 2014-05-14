@@ -44,33 +44,33 @@ function visualize(hyd::data2d)
     setattr(p1, title="rho")
 
     #additional window for 1-dim figs
-    xy = Float64[sqrt(hyd.x[i]^2+hyd.y[i]^2.0) for i = 1:hyd.nx]
-    rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    velxy = Float64[sqrt(hyd.velx[hyd.nx-i+1,i]^2.0 + hyd.velx[hyd.nx-i+1,i]^2.0) for i = hyd.nx:-1:1]
+    #xy = Float64[sqrt(hyd.x[i]^2+hyd.y[i]^2.0) for i = 1:hyd.nx]
+    #rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    #velxy = Float64[sqrt(hyd.velx[hyd.nx-i+1,i]^2.0 + hyd.velx[hyd.nx-i+1,i]^2.0) for i = hyd.nx:-1:1]
 
-    velxxy = Float64[hyd.velx[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    velyxy = Float64[hyd.vely[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    #velxxy = Float64[hyd.velx[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    #velyxy = Float64[hyd.vely[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
 
-    pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    #pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    #epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
 
     #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
     #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
     #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
 
-    p11 =  plot(xy, rhoxy, "r")
+    #p11 =  plot(xy, rhoxy, "r")
     #p11 = oplot(xy, velxy, "b-")
 
-    p11 = oplot(xy, abs(velxxy), "b")
-    p11 = oplot(xy, abs(velyxy), "c")
+    #p11 = oplot(xy, abs(velxxy), "b")
+    #p11 = oplot(xy, abs(velyxy), "c")
 
-    p11 = oplot(xy, pressxy, "g")
+    #p11 = oplot(xy, pressxy, "g")
     #p11 = oplot(hyd.y, epsxy, "k")
 
     mid = int(hyd.nx/2)
-    #p11 = plot(hyd.y, hyd.rho[:,mid], "r")
-    #p11 = oplot(hyd.y, abs(hyd.vely[:,mid]), "b")
-    #p11 = oplot(hyd.y, hyd.press[:,mid], "g")
+    p11 = plot(hyd.y, hyd.rho[:,mid], "r")
+    p11 = oplot(hyd.y, hyd.vely[:,mid], "b")
+    p11 = oplot(hyd.y, hyd.press[:,mid], "g")
     #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
 
     #pressure
@@ -86,8 +86,8 @@ function visualize(hyd::data2d)
     setattr(p2, title="press")
 
     #vel
-    #hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
-    hdata = hyd.velx[xs:ye, xs:xe]
+    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
+    #hdata = hyd.velx[xs:ye, xs:xe]
 
     p3=FramedPlot()
     clims = (minimum(hdata), maximum(hdata))

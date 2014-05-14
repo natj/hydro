@@ -192,7 +192,7 @@ function xsweep(hyd::data2d)
         hyd1 = splice(hyd, j, 1)
         fluxi = hllc(hyd1)
 
-        for i = (hyd.g):(hyd.nx-hyd.g+1)
+        for i = (hyd.g-1):(hyd.nx-hyd.g+1)
             flux[j, i, 1] = fluxi[i, 1]
             flux[j, i, 2] = fluxi[i, 2]
             flux[j, i, 4] = fluxi[i, 3]
@@ -209,7 +209,7 @@ function ysweep(hyd::data2d)
         hyd1 = splice(hyd, j, 2)
         fluxi = hllc(hyd1)
 
-        for i = (hyd.g):(hyd.ny-hyd.g+1)
+        for i = (hyd.g-1):(hyd.ny-hyd.g+1)
             flux[i, j, 1] = fluxi[i, 1]
             flux[i, j, 3] = fluxi[i, 2]
             flux[i, j, 4] = fluxi[i, 3]

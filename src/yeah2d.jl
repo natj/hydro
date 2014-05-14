@@ -238,6 +238,12 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         hyd.q = qold + dt*(0.5k1 + 0.5k2)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
+
+        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
+        #hyd.velx[:,:] -= dt*gxflx
+        #hyd.vely[:,:] -= dt*gyflx
+        #hyd.eps[:,:] -= dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+
         #apply bcs
         hyd = apply_per_bcs(hyd)
 
@@ -256,8 +262,8 @@ end
 gamma = 1.4
 cfl = 0.6
 
-nx = 50
-ny = 50
+nx = 300
+ny = 300
 tend = 5.0
 
 #initialize
@@ -266,8 +272,9 @@ hyd = data2d(nx, ny)
 
 #set up grid
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
-hyd = grid_setup(hyd, 0.0, 1.0, -0.5, 0.5)
+#hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 0.5)
 #hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
+hyd = grid_setup(hyd, 0., 1., -0.5, 0.5)
 
 #set up initial data
 #hyd = setup_taylor2(hyd)
