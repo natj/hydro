@@ -43,36 +43,6 @@ function visualize(hyd::data2d)
     setattr(p1, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p1, title="rho")
 
-    #additional window for 1-dim figs
-    #xy = Float64[sqrt(hyd.x[i]^2+hyd.y[i]^2.0) for i = 1:hyd.nx]
-    #rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    #velxy = Float64[sqrt(hyd.velx[hyd.nx-i+1,i]^2.0 + hyd.velx[hyd.nx-i+1,i]^2.0) for i = hyd.nx:-1:1]
-
-    #velxxy = Float64[hyd.velx[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    #velyxy = Float64[hyd.vely[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-
-    #pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-    #epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
-
-    #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
-    #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
-    #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
-
-    #p11 =  plot(xy, rhoxy, "r")
-    #p11 = oplot(xy, velxy, "b-")
-
-    #p11 = oplot(xy, abs(velxxy), "b")
-    #p11 = oplot(xy, abs(velyxy), "c")
-
-    #p11 = oplot(xy, pressxy, "g")
-    #p11 = oplot(hyd.y, epsxy, "k")
-
-    mid = int(hyd.nx/2)
-    p11 = plot(hyd.y, hyd.rho[:,mid], "r")
-    p11 = oplot(hyd.y, hyd.vely[:,mid], "b")
-    p11 = oplot(hyd.y, hyd.press[:,mid], "g")
-    #p11 = oplot(hyd.y, hyd.eps[:,mid], "k")
-
     #pressure
     hdata = hyd.press[xs:ye, xs:xe]
     p2=FramedPlot()
@@ -111,12 +81,52 @@ function visualize(hyd::data2d)
     setattr(p4, yrange=(hyd.y[xs], hyd.y[ye]))
     setattr(p4, title="eps")
 
-    t = Table(2,2)
+
+    ######
+    #additional window for 1-dim figs
+
+    #diagonal slice
+    xy = Float64[sqrt(hyd.x[i]^2+hyd.y[i]^2.0) for i = 1:hyd.nx]
+    rhoxy = Float64[hyd.rho[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    velxy = Float64[sqrt(hyd.velx[hyd.nx-i+1,i]^2.0 + hyd.velx[hyd.nx-i+1,i]^2.0) for i = hyd.nx:-1:1]
+
+    velxxy = Float64[hyd.velx[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    velyxy = Float64[hyd.vely[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+
+    pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+    epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
+
+    #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
+    #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
+    #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
+
+    p11 =  plot(xy, rhoxy, "r",title="diag")
+    #p11 = oplot(xy, velxy, "b-")
+
+    p11 = oplot(xy, abs(velxxy), "b")
+    p11 = oplot(xy, abs(velyxy), "c")
+
+    p11 = oplot(xy, pressxy, "g")
+    #p11 = oplot(hyd.y, epsxy, "k")
+
+
+    #middle slice
+    mid = int(hyd.nx/2)
+    p12 = plot(hyd.y, hyd.rho[:,mid], "r",title="mid")
+    p12 = oplot(hyd.y, hyd.vely[:,mid], "b")
+    p12 = oplot(hyd.y, hyd.press[:,mid], "g")
+    #p12 = oplot(hyd.y, hyd.eps[:,mid], "k")
+
+
+    t = Table(2,3)
     t[1,1] = p1
-    #t[1,2] = p2
-    t[1,2] = p11
+    t[1,2] = p2
     t[2,1] = p3
     t[2,2] = p4
+    
+    t[1,3] = p11
+    t[2,3] = p12
+
     display(t)
 
 end

@@ -8,9 +8,13 @@ type data1d
     rhop::Array{Float64,1}
     rhom::Array{Float64,1}
 
-    vel::Array{Float64,1}
-    velp::Array{Float64,1}
-    velm::Array{Float64,1}
+    velx::Array{Float64,1}
+    velxp::Array{Float64,1}
+    velxm::Array{Float64,1}
+
+    vely::Array{Float64,1}
+    velyp::Array{Float64,1}
+    velym::Array{Float64,1}
 
     eps::Array{Float64,1}
     epsp::Array{Float64,1}
@@ -36,9 +40,13 @@ type data1d
         rhop = zeros(nzones)
         rhom = zeros(nzones)
 
-        vel = zeros(nzones)
-        velp = zeros(nzones)
-        velm = zeros(nzones)
+        velx = zeros(nzones)
+        velxp = zeros(nzones)
+        velxm = zeros(nzones)
+
+        vely = zeros(nzones)
+        velyp = zeros(nzones)
+        velym = zeros(nzones)
 
         eps = zeros(nzones)
         epsp = zeros(nzones)
@@ -48,9 +56,9 @@ type data1d
         pressp = zeros(nzones)
         pressm = zeros(nzones)
 
-        q = zeros(nzones, 3)
-        qp = zeros(nzones, 3)
-        qm = zeros(nzones, 3)
+        q = zeros(nzones, 4)
+        qp = zeros(nzones, 4)
+        qm = zeros(nzones, 4)
         n = nzones
         g = 3
 
@@ -59,9 +67,12 @@ type data1d
             rho,
             rhop,
             rhom,
-            vel,
-            velp,
-            velm,
+            velx,
+            velxp,
+            velxm,
+            vely,
+            velyp,
+            velym,
             eps,
             epsp,
             epsm,
@@ -511,8 +522,8 @@ function setup_kh(self::data2d)
         end
     end
 
-    Lx = 0.25*abs(self.x[self.nx - self.g] - self.x[self.g+1])
-    Ly = 0.25*abs(self.y[self.ny - self.g] - self.y[self.g+1])
+    Lx = 0.5*abs(self.x[self.nx - self.g] - self.x[self.g+1])
+    Ly = 0.5*abs(self.y[self.ny - self.g] - self.y[self.g+1])
 
     for j = (self.g+1):(self.ny - self.g), i = (self.g+1):(self.nx - self.g)
         self.velx[j,i] += A*((1.0+cos(2pi*self.x[i]/Lx)*(1.0+cos(2pi*self.y[j]/Ly))))
@@ -763,11 +774,17 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
         hyd1.x = hyd.x
         hyd1.xi = hyd.xi
 
-        hyd1.velp[:] = vec(hyd.velxp[ys, xs, dim])
-        hyd1.velm[:] = vec(hyd.velxm[ys, xs, dim])
+        hyd1.velxp[:] = vec(hyd.velxp[ys, xs, dim])
+        hyd1.velxm[:] = vec(hyd.velxm[ys, xs, dim])
+
+        hyd1.velyp[:] = vec(hyd.velyp[ys, xs, dim])
+        hyd1.velym[:] = vec(hyd.velym[ys, xs, dim])
 
         hyd1.qm[:, 2] = vec(hyd.qm[ys, xs, 2, dim])
         hyd1.qp[:, 2] = vec(hyd.qp[ys, xs, 2, dim])
+
+        hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 3, dim])
+        hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 3, dim])
 
     elseif dim == 2 #y-dim
         #println("y j=$j $(hyd.nx)")
@@ -779,18 +796,25 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
         hyd1.x = hyd.y
         hyd1.xi = hyd.yi
 
-        hyd1.velp[:] = vec(hyd.velyp[ys, xs, dim])
-        hyd1.velm[:] = vec(hyd.velym[ys, xs, dim])
+        hyd1.velxp[:] = vec(hyd.velyp[ys, xs, dim])
+        hyd1.velxm[:] = vec(hyd.velym[ys, xs, dim])
+
+        hyd1.velyp[:] = vec(hyd.velxp[ys, xs, dim])
+        hyd1.velym[:] = vec(hyd.velxm[ys, xs, dim])
 
         hyd1.qm[:, 2] = vec(hyd.qm[ys, xs, 3, dim])
         hyd1.qp[:, 2] = vec(hyd.qp[ys, xs, 3, dim])
+
+        hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 2, dim])
+        hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 2, dim])
+
     else
         error("dim = $dim is not valid")
     end
 
 
     hyd1.g = hyd.g
-    #hyd1.rho[:] = vec(hyd.rho[i, :])
+
     hyd1.rhom[:] = vec(hyd.rhom[ys, xs, dim])
     hyd1.rhop[:] = vec(hyd.rhop[ys, xs, dim])
 
@@ -803,8 +827,8 @@ function splice(hyd::data2d, j::Int64, dim::Int64)
     hyd1.qm[:, 1] = vec(hyd.qm[ys, xs, 1, dim])
     hyd1.qp[:, 1] = vec(hyd.qp[ys, xs, 1, dim])
 
-    hyd1.qm[:, 3] = vec(hyd.qm[ys, xs, 4, dim])
-    hyd1.qp[:, 3] = vec(hyd.qp[ys, xs, 4, dim])
+    hyd1.qm[:, 4] = vec(hyd.qm[ys, xs, 4, dim])
+    hyd1.qp[:, 4] = vec(hyd.qp[ys, xs, 4, dim])
 
     return hyd1
 end
