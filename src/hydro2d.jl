@@ -1,17 +1,16 @@
-#YEt Another Hydro code
-#2-dim
-
+#2-dim version
 
 include("grid.jl")
 include("visualize.jl")
 include("eos.jl")
-include("reconstr.jl")
-include("solvers.jl")
+include("reconstruct.jl")
+include("rsolvers.jl")
 include("gravity.jl")
+
 
 using Winston
 
-#2-dim
+#Primary variables to conserved variables
 function prim2con(rho::AbstractMatrix,
                   velx::AbstractMatrix,
                   vely::AbstractMatrix,
@@ -28,21 +27,13 @@ function prim2con(rho::AbstractMatrix,
 end
 
 
-#2-dim
+#Conserved variables to primary variables
 function con2prim(q)
     rho = q[:, :, 1]
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
     eps = q[:, :, 4] ./ rho .- 0.5(velx.^2.0 .+ vely.^2.0)
     #eps = clamp(eps, 1.0e-10, 1.0e10)
-
-    #for i = 1:50, j = 1:100
-    #    if eps[j, i] < 0.0
-    #        println("eps = $(eps[j, i]) i=$i j=$j")
-    #        println("$(q[j, i, 4]) $(rho[j,i]) $(0.5(velx[j,i]^2.0 + vely[j,i]^2.0)) ")
-    #    end
-    #end
-
 
     press = eos_press(rho, eps, gamma)
 
@@ -128,6 +119,7 @@ function avisc_CW(u, v, g, nx, ny, dx, dy)
     return avisco_x, avisco_y
 end
 
+#Artificial viscosity 
 function artificial_viscosity(hyd::data2d, dt)
 
     dx = abs(hyd.x[2]-hyd.x[1])
@@ -147,6 +139,7 @@ function artificial_viscosity(hyd::data2d, dt)
     return fx, fy
 end
 
+#snapshot of the simulation
 function snapshot(hyd, it)
 
             cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
@@ -167,6 +160,7 @@ function snapshot(hyd, it)
     return nothing
 end
 
+#Construct the right hand side of the group of equations
 function calc_rhs(hyd, dt)
 
     #reconstruction and prim2con
@@ -196,7 +190,6 @@ function calc_rhs(hyd, dt)
         end
     end
 
-    #return RHS = -fluxdiff
     return -fluxdiff
 end
 
@@ -299,6 +292,10 @@ hyd = data2d(nx, ny)
 #r32x, r32y = r32kernel(hyd.x, hyd.y)
 
 #set up grid
+
+include("../tests/1dim_hd.jl")
+include("../tests/2dim_hd.jl")
+
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 0.5)
 hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)

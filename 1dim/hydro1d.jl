@@ -1,5 +1,4 @@
-#YEt Another Hydro code
-# 1-dim (backup)
+# 1-dim version of the code 
 
 using Winston
 
@@ -13,7 +12,81 @@ nzones = 200
 tend = 0.2
 
 
-include("grid.jl")
+type data1d
+    x::Array{Float64,1} #cell centers
+    xi::Array{Float64,1} #cell LEFT interfaces
+
+    rho::Array{Float64,1}
+    rhop::Array{Float64,1}
+    rhom::Array{Float64,1}
+
+    vel::Array{Float64,1}
+    velp::Array{Float64,1}
+    velm::Array{Float64,1}
+
+    eps::Array{Float64,1}
+    epsp::Array{Float64,1}
+    epsm::Array{Float64,1}
+
+    press::Array{Float64,1}
+    pressp::Array{Float64,1}
+    pressm::Array{Float64,1}
+
+    q::Array{Float64,2} #conserved quantities
+    qp::Array{Float64,2}
+    qm::Array{Float64,2}
+
+    n::Int64
+    g::Int64 #ghost cells
+
+    function data1d(nzones::Int64)
+
+        x = zeros(nzones)
+        xi = zeros(nzones)
+
+        rho = zeros(nzones)
+        rhop = zeros(nzones)
+        rhom = zeros(nzones)
+
+        vel = zeros(nzones)
+        velp = zeros(nzones)
+        velm = zeros(nzones)
+
+        eps = zeros(nzones)
+        epsp = zeros(nzones)
+        epsm = zeros(nzones)
+
+        press = zeros(nzones)
+        pressp = zeros(nzones)
+        pressm = zeros(nzones)
+
+        q = zeros(nzones, 3)
+        qp = zeros(nzones, 3)
+        qm = zeros(nzones, 3)
+        n = nzones
+        g = 3
+
+        new(x,
+            xi,
+            rho,
+            rhop,
+            rhom,
+            vel,
+            velp,
+            velm,
+            eps,
+            epsp,
+            epsm,
+            press,
+            pressp,
+            pressm,
+            q,
+            qp,
+            qm,
+            n,
+            g)
+    end
+end
 
 
 #1-dim grid
