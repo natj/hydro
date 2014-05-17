@@ -1,19 +1,11 @@
-# hydrosolver #
+# 2-dim hydrodynamics#
 
-## Simple &amp; small hydrodynamics code ##
-
-
-
-#### Info ####
-
-Seems to behave amazingly well. Tests passed:
-
-* Sod's problem (shock tube)
-* Strong shock (at least very close to!)
-
+## YEt Another Hydrodynamic code##
 
 
 ===========
 ### References ###
 
-Code skeleton taken from Caltech course ay190 - Computational astrophysics by Christian Ott.
+* Code skeleton from Caltech course ay190 - Computational astrophysics (by Christian Ott)
+* Modifications & additions similar to Pyro code
+* Tests inspired by Athena code
