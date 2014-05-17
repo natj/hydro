@@ -147,6 +147,25 @@ function artificial_viscosity(hyd::data2d, dt)
     return fx, fy
 end
 
+function snapshot(hyd, it)
+
+            cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+            xs = hyd.g+1
+            xe = hyd.nx-hyd.g
+            ye = hyd.ny-hyd.g
+
+            hdata = hyd.rho[xs:ye, xs:xe]
+            pf=FramedPlot()
+            clims = (0.8, 2.1)
+            img = Winston.data2rgb(hdata, clims, cm)
+            add(pf, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+            setattr(pf, xrange=(hyd.x[xs], hyd.x[xe]))
+            setattr(pf, yrange=(hyd.y[xs], hyd.y[ye]))
+            #setattr(pf, title="rho")
+            Winston.file(pf, "film_$(it).png")
+
+    return nothing
+end
 
 function calc_rhs(hyd, dt)
 
@@ -154,7 +173,7 @@ function calc_rhs(hyd, dt)
     hyd = reconstruct(hyd)
 
     #apply source terms for the interfaces
-    #hyd = source_terms(hyd, dt)
+    hyd = source_terms(hyd, dt)
 
     #compute flux difference
     #fluxdiff = sflux(hyd, dt, iter)
@@ -189,6 +208,9 @@ end
 
 function evolve(hyd, tend, gamma, cfl, nx, ny)
 
+    time = linspace(0.0, tend, int(tend*100))
+    it = 1
+
     dt = 1.0e-5
     dtp = dt
 
@@ -210,6 +232,11 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
             visualize(hyd)
         end
 
+        if time[it] <= t
+            #snapshot(hyd, it)
+            it += 1
+        end
+
         #calculate new timestep
         dt = calc_dt(hyd, dt)
 
@@ -224,13 +251,13 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
 
-        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
-        #hyd.velx[:,:] -= 0.5dt*gxflx
-        #hyd.vely[:,:] -= 0.5dt*gyflx
-        #hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
+        hyd.velx[:,:] -= 0.5dt*gxflx
+        hyd.vely[:,:] -= 0.5dt*gyflx
+        hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
 
         #boundaries
-        hyd = apply_per_bcs(hyd)
+        hyd = apply_bcs(hyd)
 
         #calc rhs
         k2 = calc_rhs(hyd, dt)
@@ -239,13 +266,13 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         #con2prim
         hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
 
-        #gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
-        #hyd.velx[:,:] -= dt*gxflx
-        #hyd.vely[:,:] -= dt*gyflx
-        #hyd.eps[:,:] -= dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
+        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
+        hyd.velx[:,:] -= dt*gxflx
+        hyd.vely[:,:] -= dt*gyflx
+        hyd.eps[:,:] -= dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
 
         #apply bcs
-        hyd = apply_per_bcs(hyd)
+        hyd = apply_bcs(hyd)
 
         #update time
         t += dt
@@ -262,9 +289,10 @@ end
 gamma = 1.4
 cfl = 0.6
 
-nx = 300
-ny = 300
+nx = 50
+ny = 150
 tend = 5.0
+
 
 #initialize
 hyd = data2d(nx, ny)
@@ -273,17 +301,17 @@ hyd = data2d(nx, ny)
 #set up grid
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 0.5)
-#hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
-hyd = grid_setup(hyd, 0., 1., -0.5, 0.5)
+hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
+#hyd = grid_setup(hyd, 0., 1., -0.5, 0.5)
 
 #set up initial data
-#hyd = setup_taylor2(hyd)
+hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
 #hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)
-hyd = setup_kh(hyd)
+#hyd = setup_kh(hyd)
 
 visualize(hyd)
 

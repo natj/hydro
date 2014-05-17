@@ -472,7 +472,7 @@ end
 
 #Taylor instability initial data according to Athena code
 function setup_taylor2(self::data2d)
-    rchange = int(0.25self.ny)
+    rchange = int(0.5self.ny)
 
     A = 0.01
     grav = 0.005
@@ -496,7 +496,7 @@ function setup_taylor2(self::data2d)
 
     #set pressure to hydrostatic equiblibrium
     for j = (self.g+1):(self.ny-self.g)
-        self.press[j,:] = 2.5 - self.rho[j,20]*grav*self.y[j]
+        self.press[j,:] = 2.5 - self.rho[j,20]*grav
     end
     self.eps[:,:] = self.press[:,:] ./ self.rho[:,:] ./ (gamma - 1.0)
 
