@@ -58,20 +58,27 @@ end
 #snapshot of the simulation
 function snapshot(hyd, it)
 
-            cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
-            xs = hyd.g+1
-            xe = hyd.nx-hyd.g
-            ye = hyd.ny-hyd.g
+    cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+    xs = hyd.g+1
+    xe = hyd.nx-hyd.g
+    ye = hyd.ny-hyd.g
 
-            hdata = hyd.rho[xs:ye, xs:xe]
-            pf=FramedPlot()
-            clims = (0.8, 2.1)
-            img = Winston.data2rgb(hdata, clims, cm)
-            add(pf, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
-            setattr(pf, xrange=(hyd.x[xs], hyd.x[xe]))
-            setattr(pf, yrange=(hyd.y[xs], hyd.y[ye]))
-            #setattr(pf, title="rho")
-            Winston.file(pf, "film_$(it).png")
+    hdata = hyd.rho[xs:ye, xs:xe]
+    pf=FramedPlot()
+    clims = (0., 2.5)
+    img = Winston.data2rgb(hdata, clims, cm)
+    add(pf, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
+    setattr(pf, xrange=(hyd.x[xs], hyd.x[xe]))
+    setattr(pf, yrange=(hyd.y[xs], hyd.y[ye]))
+    #setattr(pf, title="rho")
+
+    setattr(pf.frame, 
+            draw_spine=false, 
+            draw_ticks=false,
+            draw_ticklabels=false)
+
+    numb = lpad(it, 0, 3)
+    Winston.file(pf, "film_$(numb).png", width=200, height=200)
 
     return nothing
 end
@@ -140,7 +147,7 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         end
 
         if time[it] <= t
-            #snapshot(hyd, it)
+            snapshot(hyd, it)
             it += 1
         end
 
@@ -164,8 +171,8 @@ end
 gamma = 1.4
 cfl = 0.6
 
-nx = 8
-ny = 500
+nx = 50
+ny = 50
 tend = 5.0
 
 
@@ -186,8 +193,8 @@ hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 #set up initial data
 #hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
-#hyd = setup_tubexy(hyd)
-hyd = setup_tubey(hyd)
+hyd = setup_tubexy(hyd)
+#hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)
 #hyd = setup_kh(hyd)
