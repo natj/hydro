@@ -1,6 +1,7 @@
 #Visualization
 
 #Colormap
+using Color
 cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
 #cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
 

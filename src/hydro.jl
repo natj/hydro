@@ -1,12 +1,14 @@
 #2-dim version
 
 include("grid.jl")
+include("boundaries.jl")
 include("visualize.jl")
 include("eos.jl")
 include("reconstruct.jl")
 include("rsolvers.jl")
 include("gravity.jl")
-
+include("viscosity.jl")
+include("integrators.jl")
 
 using Winston
 
@@ -21,7 +23,6 @@ function prim2con(rho::AbstractMatrix,
     q[:, :, 2] = rho .* velx
     q[:, :, 3] = rho .* vely
     q[:, :, 4] = rho .* eps .+ 0.5rho .* (velx.^2.0 .+ vely.^2.0)
-    #q[:, :, 4] = clamp(q[:,:,4], 1.0e-10, 1.0e10)
 
     return q
 end
@@ -33,7 +34,6 @@ function con2prim(q)
     velx = q[:, :, 2] ./ rho
     vely = q[:, :, 3] ./ rho
     eps = q[:, :, 4] ./ rho .- 0.5(velx.^2.0 .+ vely.^2.0)
-    #eps = clamp(eps, 1.0e-10, 1.0e10)
 
     press = eos_press(rho, eps, gamma)
 
@@ -54,90 +54,6 @@ function calc_dt(hyd, dtp)
     return dtnew
 end
 
-#Additional source terms
-function source_terms(hyd::data2d, dt)
-
-    #self-gravity
-    #gxflx, gyflx = selfgravity(hyd.rho, hyd.nx, hyd.ny, r32x, r32y)
-
-    #constant gravity
-
-    #x-dir
-    dir = 1
-
-    #+
-    gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
-    hyd.velxp[:,:,dir] += 0.5*gxflx
-    hyd.velyp[:,:,dir] += 0.5*gyflx
-    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
-
-    #-
-    gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
-    hyd.velxm[:,:,dir] += 0.5*gxflx
-    hyd.velym[:,:,dir] += 0.5*gyflx
-    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
-
-
-    #y-dir
-    dir = 2
-
-    #+
-    gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
-    hyd.velxp[:,:,dir] += 0.5*gxflx
-    hyd.velyp[:,:,dir] += 0.5*gyflx
-    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
-
-    #-
-    gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
-    hyd.velxm[:,:,dir] += 0.5*gxflx
-    hyd.velym[:,:,dir] += 0.5*gyflx
-    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
-
-
-    return hyd
-end
-
-#Colella & Woodward 1984 (eq. 4.5)
-function avisc_CW(u, v, g, nx, ny, dx, dy)
-
-    const cvisc = 0.1
-
-    avisco_x = zeros(ny, nx)
-    avisco_y = zeros(ny, nx)
-
-    for j = (g-1):(ny-g+1), i = (g-1):(nx-g+1)
-
-        #x-interface
-        divU_x = (u[j, i] - u[j, i-1])/dx + 0.25(v[j+1, i] + v[j+1, i-1] - v[j-1, i] - v[j-1, i-1])/dx
-        avisco_x[j, i] = cvisc*max(-divU_x*dx, 0.0)
-
-        #y-interface value
-        divU_y = 0.25(u[j, i+1] + u[j-1, i+1] - u[j, i-1] - u[j-1, i-1])/dx + (v[j, i] - v[j-1, i])/dy
-        avisco_y[j, i] = cvisc*max(-divU_y*dy, 0.0)
-    end
-
-    return avisco_x, avisco_y
-end
-
-#Artificial viscosity 
-function artificial_viscosity(hyd::data2d, dt)
-
-    dx = abs(hyd.x[2]-hyd.x[1])
-    dy = abs(hyd.y[2]-hyd.y[1])
-    aviscx, aviscy = avisc_CW(hyd.velx, hyd.vely, hyd.g, hyd.nx, hyd.ny, dx, dy)
-
-    fx = zeros(hyd.ny, hyd.nx, 4)
-    fy = zeros(hyd.ny, hyd.nx, 4)
-
-    for j = (hyd.g):(hyd.ny-hyd.g+1), i = (hyd.g):(hyd.nx-hyd.g+1)
-        for k = 1:4
-            fx[j, i, k] = aviscx[j, i]*(hyd.q[j, i-1, k] - hyd.q[j, i, k])
-            fy[j, i, k] = aviscy[j, i]*(hyd.q[j-1, i, k] - hyd.q[j, i, k])
-        end
-    end
-
-    return fx, fy
-end
 
 #snapshot of the simulation
 function snapshot(hyd, it)
@@ -167,10 +83,9 @@ function calc_rhs(hyd, dt)
     hyd = reconstruct(hyd)
 
     #apply source terms for the interfaces
-    hyd = source_terms(hyd, dt)
+    #hyd = source_terms(hyd, dt)
 
-    #compute flux difference
-    #fluxdiff = sflux(hyd, dt, iter)
+    #unsplit flux
     fx, fy = uflux(hyd, dt)
 
     #add artificial viscosity
@@ -178,13 +93,12 @@ function calc_rhs(hyd, dt)
     #fx += vfx
     #fy += vfy
 
-    #hyd = source_terms(hyd, 2.0dt)
-
-    dx = abs(hyd.x[2]-hyd.x[1])
-    dy = abs(hyd.y[2]-hyd.y[1])
-
+    #flux difference
     fluxdiff = zeros(hyd.ny, hyd.nx, 4)
     for j = (hyd.g-1):(hyd.ny-hyd.g+1), i = (hyd.g-1):(hyd.nx-hyd.g+1)
+        dx = abs(hyd.x[i+1]-hyd.x[i])
+        dy = abs(hyd.y[j+1]-hyd.y[j])
+
         for k = 1:4
             fluxdiff[j, i, k] = (fx[j, i, k] - fx[j, i-1, k])/dx + (fy[j, i, k] - fy[j-1, i, k])/dy
         end
@@ -233,45 +147,13 @@ function evolve(hyd, tend, gamma, cfl, nx, ny)
         #calculate new timestep
         dt = calc_dt(hyd, dt)
 
-        #save old state
-        old_rho = copy(hyd.rho[:,:])
-        qold = copy(hyd.q)
-
-        #calc rhs
-        k1 = calc_rhs(hyd, 0.5dt)
-        #calculate intermediate step
-        hyd.q = qold + 0.5dt*k1
-        #con2prim
-        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
-
-        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
-        hyd.velx[:,:] -= 0.5dt*gxflx
-        hyd.vely[:,:] -= 0.5dt*gyflx
-        hyd.eps[:,:] -= 0.5dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
-
-        #boundaries
-        hyd = apply_bcs(hyd)
-
-        #calc rhs
-        k2 = calc_rhs(hyd, dt)
-        #apply update
-        hyd.q = qold + dt*(0.5k1 + 0.5k2)
-        #con2prim
-        hyd.rho, hyd.eps, hyd.press, hyd.velx, hyd.vely = con2prim(hyd.q)
-
-        gxflx, gyflx = ygravity(0.5(hyd.rho[:,:]+old_rho[:,:]), hyd.nx, hyd.ny)
-        hyd.velx[:,:] -= dt*gxflx
-        hyd.vely[:,:] -= dt*gyflx
-        hyd.eps[:,:] -= dt*((hyd.velx[:,:] .* gxflx) .+ (hyd.vely[:,:] .* gyflx))
-
-        #apply bcs
-        hyd = apply_bcs(hyd)
+        #time integration
+        hyd = RK2(hyd, dt)
 
         #update time
         t += dt
         i += 1
 
-        #if i > 100; break; end
     end
 
     return hyd
@@ -282,8 +164,8 @@ end
 gamma = 1.4
 cfl = 0.6
 
-nx = 50
-ny = 150
+nx = 8
+ny = 500
 tend = 5.0
 
 
@@ -296,16 +178,16 @@ hyd = data2d(nx, ny)
 include("../tests/1dim_hd.jl")
 include("../tests/2dim_hd.jl")
 
-#hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
+hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 1.0)
 #hyd = grid_setup(hyd, 0.0, 1.0, 0.0, 0.5)
-hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
+#hyd = grid_setup(hyd, -0.25, 0.25, -0.75, 0.75)
 #hyd = grid_setup(hyd, 0., 1., -0.5, 0.5)
 
 #set up initial data
-hyd = setup_taylor2(hyd)
+#hyd = setup_taylor2(hyd)
 #hyd = setup_blast(hyd)
 #hyd = setup_tubexy(hyd)
-#hyd = setup_tubey(hyd)
+hyd = setup_tubey(hyd)
 #hyd = setup_collision(hyd)
 #hyd = setup_fall(hyd)
 #hyd = setup_kh(hyd)
