@@ -1,5 +1,50 @@
 #Gravity related stuff
 
+
+#Additional source terms
+function source_terms(hyd::data2d, dt)
+
+    #self-gravity
+    #gxflx, gyflx = selfgravity(hyd.rho, hyd.nx, hyd.ny, r32x, r32y)
+
+    #constant gravity
+
+    #x-dir
+    dir = 1
+
+    #+
+    gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
+    hyd.velxp[:,:,dir] += 0.5*gxflx
+    hyd.velyp[:,:,dir] += 0.5*gyflx
+    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
+
+    #-
+    gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
+    hyd.velxm[:,:,dir] += 0.5*gxflx
+    hyd.velym[:,:,dir] += 0.5*gyflx
+    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
+
+
+    #y-dir
+    dir = 2
+
+    #+
+    gxflx, gyflx = ygravity(hyd.rhop[:,:,dir], hyd.nx, hyd.ny)
+    hyd.velxp[:,:,dir] += 0.5*gxflx
+    hyd.velyp[:,:,dir] += 0.5*gyflx
+    hyd.epsp[:,:,dir] += 0.5*((hyd.velxp[:,:,dir] .* gxflx) .+ (hyd.velyp[:,:,dir] .* gyflx))
+
+    #-
+    gxflx, gyflx = ygravity(hyd.rhom[:,:,dir], hyd.nx, hyd.ny)
+    hyd.velxm[:,:,dir] += 0.5*gxflx
+    hyd.velym[:,:,dir] += 0.5*gyflx
+    hyd.epsm[:,:,dir] += 0.5*((hyd.velxm[:,:,dir] .* gxflx) .+ (hyd.velym[:,:,dir] .* gyflx))
+
+
+    return hyd
+end
+
+#Constant y-dir gravity
 function ygravity(rho::AbstractMatrix,
                   nx::Int64,
                   ny::Int64;
@@ -12,7 +57,8 @@ function ygravity(rho::AbstractMatrix,
     return gxflux, gyflux
 end
 
-#Calculate x(x^2 + y^2)^-3/2 and y(x^2 + y^2)^-3/2
+#Calculate x(x^2 + y^2)^-3/2 and y(x^2 + y^2)^-3/2 kernel
+#for convolution used in self-gravity
 function r32kernel(x, y)
 
     Nx = length(x)
@@ -59,6 +105,7 @@ function r32kernel(x, y)
     return r32x, r32y
 end
 
+#Self-gravity
 function selfgravity(rho::AbstractMatrix,
                      nx::Int64,
                      ny::Int64,
