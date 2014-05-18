@@ -1,85 +1,92 @@
-function visualize(data::AbstractMatrix, xmin, ymin, xmax, ymax; g=1)
+#Visualization
 
-    cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+#Colormap
+cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
+#cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
+
+#Visualize common matrix
+function visualize_M(data::AbstractMatrix, 
+                     x, y;
+                     g=1, 
+                     title="", 
+                     dmin=0.0, 
+                     dmax=:find)
 
     ny, nx = size(data)
-    xs = g
-    xe = nx - g
-    ye = ny - g
+    xs = g +1 
+    xe = nx - g + 1
+    ye = ny - g + 1
+
+    xmin = x[xs]
+    xmax = x[xe]
+    ymin =  y[xs]
+    ymax =  y[ye]    
 
     hdata = data[xs:ye, xs:xe]
     p = FramedPlot()
+
+    #look or set min and max values
+    if dmin == :find
+        hmin = minimum(hdata)
+    elseif isa(dmin, Real)
+        hmin = dmin
+    end
+
+    if dmax == :find
+        hmax = maximum(hdata)
+    elseif isa(dmax, Real)
+        hmax = dmax
+    end
+
     clims = (minimum(hdata), maximum(hdata))
+
+    #make image
     img = Winston.data2rgb(hdata, clims, cm)
     add(p, Image((xmin, xmax), (ymin, ymax), img;))
     setattr(p, xrange=(xmin, xmax))
     setattr(p, yrange=(ymin, ymax))
-    display(p)
+    setattr(p, title=title)
+
     return p
 end
 
 function visualize(hyd::data2d)
 
-    cm = Uint32[Color.convert(Color.RGB24,c) for c in flipud(Color.colormap("RdBu"))]
-    #cm = Uint32[Color.convert(Color.RGB24,c) for c in Color.colormap("RdBu")]
-
-
-    #xs = hyd.g
-    #xe = hyd.nx-hyd.g-1
-    #ye = hyd.ny-hyd.g-1
-
-    xs = 1
-    xe = hyd.nx
-    ye = hyd.ny
-
-    hdata = hyd.rho[xs:ye, xs:xe]
-    p1=FramedPlot()
-    #clims = (minimum(hdata), maximum(hdata))
-    clims = (0.8, 2.1)
-    #clims = (0.0, maximum(hdata))
-    img = Winston.data2rgb(hdata, clims, cm)
-    add(p1, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
-    setattr(p1, xrange=(hyd.x[xs], hyd.x[xe]))
-    setattr(p1, yrange=(hyd.y[xs], hyd.y[ye]))
-    setattr(p1, title="rho")
+    #density
+    p1 = visualize_M(hyd.rho,
+                     hyd.x, hyd.y,
+                     g=3,
+                     title="density <i>\\rho</i>",
+                     dmin = :find,
+                     dmax = :find)
 
     #pressure
-    hdata = hyd.press[xs:ye, xs:xe]
-    p2=FramedPlot()
-    #clims = (minimum(hdata), maximum(hdata))
-    #clims = (0.0, 1.0)
-    clims = (0.0, maximum(hdata))
-    img = Winston.data2rgb(hdata, clims, cm)
-    add(p2, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
-    setattr(p2, xrange=(hyd.x[xs], hyd.x[xe]))
-    setattr(p2, yrange=(hyd.y[xs], hyd.y[ye]))
-    setattr(p2, title="press")
+    p2 = visualize_M(hyd.press,
+                     hyd.x, hyd.y,
+                     g=3,
+                     title="pressure <i>p</i>",
+                     dmin = 0.0,
+                     dmax = :find)
 
-    #vel
-    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)[xs:ye, xs:xe]
+
+    #velocity
+    hdata = sqrt(hyd.velx.^2.0 .+ hyd.vely.^2.0)
     #hdata = hyd.velx[xs:ye, xs:xe]
 
-    p3=FramedPlot()
-    clims = (minimum(hdata), maximum(hdata))
-    #clims = (0.0, maximum(hdata))
-    #clims = (0.0, 1.0)
-    img = Winston.data2rgb(hdata, clims, cm)
-    add(p3, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
-    setattr(p3, xrange=(hyd.x[xs], hyd.x[xe]))
-    setattr(p3, yrange=(hyd.y[xs], hyd.y[ye]))
-    setattr(p3, title="vel")
+    p3 = visualize_M(hdata,
+                     hyd.x, hyd.y,
+                     g=3,
+                     title="velocity <i>(u^2 + v^2)^{1/2}</i>",
+                     dmin = :find,
+                     dmax = :find)
 
-    #eps
-    hdata = hyd.eps[xs:ye, xs:xe]
-    p4=FramedPlot()
-    #clims = (minimum(hdata), maximum(hdata))
-    #clims = (0.0, 1.0)
-    clims = (0.0, maximum(hdata))
-    img = Winston.data2rgb(hdata, clims, cm)
-    add(p4, Image((hyd.x[xs], hyd.x[xe]), (hyd.y[xs], hyd.y[ye]), img;))
-    setattr(p4, xrange=(hyd.x[xs], hyd.x[xe]))
-    setattr(p4, yrange=(hyd.y[xs], hyd.y[ye]))
-    setattr(p4, title="eps")
+    #internal energy
+    p4 = visualize_M(hyd.press,
+                     hyd.x, hyd.y,
+                     g=3,
+                     title="internal energy <i>ε</i>",
+                     dmin = 0.0,
+                     dmax = :find)
 
 
     ######
@@ -96,23 +103,16 @@ function visualize(hyd::data2d)
     pressxy = Float64[hyd.press[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
     epsxy = Float64[hyd.eps[hyd.nx-i+1,i] for i = hyd.nx:-1:1]
 
-    #p11 = plot(hyd.y, rhoo)#, yrange=[0.0, 3.0])
-    #p11 = plot(hyd.y, hyd.rho[:,50])#, yrange=[0.0, 3.0])
-    #p11 = oplot(hyd.y, hyd.rho[:,3], "r--")
-
-    p11 =  plot(xy, rhoxy, "r",title="diag")
-    #p11 = oplot(xy, velxy, "b-")
-
+    p11 =  plot(xy, rhoxy, "r",title="diagonal slice")
     p11 = oplot(xy, abs(velxxy), "b")
     p11 = oplot(xy, abs(velyxy), "c")
-
     p11 = oplot(xy, pressxy, "g")
     #p11 = oplot(hyd.y, epsxy, "k")
 
 
     #middle slice
     mid = int(hyd.nx/2)
-    p12 = plot(hyd.y, hyd.rho[:,mid], "r",title="mid")
+    p12 = plot(hyd.y, hyd.rho[:,mid], "r",title="middle slice")
     p12 = oplot(hyd.y, hyd.vely[:,mid], "b")
     p12 = oplot(hyd.y, hyd.press[:,mid], "g")
     #p12 = oplot(hyd.y, hyd.eps[:,mid], "k")
