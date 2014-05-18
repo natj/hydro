@@ -1,7 +1,6 @@
 # Hydro #
 #### Fairly simple & very modular 1- and 2-dimensional hydrodynamic code
 
----------
 Hydro is a 2 dimensional hydrodynamic code written completely in julia.
 It aims to be modular and flexible foundation for more complex computational needs.
 
