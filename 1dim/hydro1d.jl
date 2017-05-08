@@ -4,11 +4,11 @@ using Winston
 
 #basic parameters
 gamma = 1.4
-cfl = 0.5
+cfl = 0.8
 dt = 1.0e-5
 dtp = dt
 
-nzones = 200
+nzones = 100
 tend = 0.2
 
 
@@ -293,13 +293,16 @@ function reconstruct(hyd::data1d)
 end
 
 #Load solvers
-include("solvers.jl")
+include("rsolvers1d.jl")
+
 
 function calc_rhs(hyd::data1d)
     #reconstruction and prim2con
     hyd = reconstruct(hyd)
+
     #compute flux difference
-    fluxdiff = hllc(hyd)
+    fluxdiff = hlle(hyd)
+
     #return RHS = -fluxdiff
     return -fluxdiff
 end
@@ -328,16 +331,34 @@ hyd.q = prim2con(hyd.rho, hyd.vel, hyd.eps)
 t = 0.0
 i = 1
 
+tsave = collect(0.0:0.01:0.2)
+
+k = 1
 while t < tend
 
     if i % 10 == 0
-        sleep(1.0)
+        #sleep(1.0)
         #output
         println("$i $t $dt")
         p=plot(hyd.x, hyd.rho, "r-")
         p=oplot(hyd.x, hyd.vel, "b-")
         p=oplot(hyd.x, hyd.press, "g-")
         display(p)
+    end
+
+    if (t >= tsave[k])
+        println("t = $t")
+        wmatr = zeros(nzones, 5)
+
+        wmatr[:,1] = hyd.x
+        wmatr[:,2] = hyd.rho
+        wmatr[:,3] = hyd.vel
+        wmatr[:,4] = hyd.eps
+        wmatr[:,5] = hyd.press
+
+        writecsv("step_$k.csv", wmatr)
+
+        k += 1
     end
 
     #calculate new timestep
